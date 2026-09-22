@@ -28,7 +28,7 @@ function json(data, status, origin, allowedOrigins) {
 function normalizeMessages(messages) {
   if (!Array.isArray(messages)) return [];
   return messages
-    .slice(-12)
+    .slice(-20)
     .filter(m => m && ["user", "assistant"].includes(m.role))
     .map(m => ({
       role: m.role,
