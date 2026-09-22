@@ -1,10 +1,11 @@
 name = "profe-ia-593"
 main = "src/index.js"
 compatibility_date = "2026-09-22"
+keep_vars = true
 
 # NO pongas la API key aquí.
 # GROQ_API_KEY se guarda como Secret en Cloudflare.
-#
-# Configura estas dos variables en Cloudflare > Worker > Settings > Variables:
-# ALLOWED_ORIGINS = https://TU-PROYECTO.pages.dev
-# GROQ_MODEL = ID_EXACTO_DE_UN_MODELO_ACTIVO_EN_TU_CUENTA_GROQ
+
+[vars]
+ALLOWED_ORIGINS = "https://aula-virtual-593tucaminoalau.io-web-space-neto-f-box.workers.dev"
+GROQ_MODEL = "qwen/qwen3.8-27b"
