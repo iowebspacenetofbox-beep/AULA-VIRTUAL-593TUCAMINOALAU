@@ -928,6 +928,13 @@ onAuthStateChanged(auth, async (user) => {
 
             const datosAlumno = authSnap.data() || {};
             nombreVisible = String(datosAlumno.nombre || user.displayName || user.email.split('@')[0] || 'Estudiante').trim();
+
+            if(datosAlumno.uid !== user.uid) {
+                setDoc(doc(db, "alumnos_autorizados", user.email.toLowerCase()), {
+                    uid: user.uid,
+                    ultimo_acceso: new Date().toISOString()
+                }, { merge: true }).catch(err => console.warn("No se pudo asociar UID del alumno:", err));
+            }
         }
 
         usuarioActual = user;
@@ -1030,10 +1037,11 @@ window.cargarMateria = async function(materiaId, materiaNombre) {
     const container = document.getElementById('materia-modulos-container');
     container.innerHTML = "<p style='color: var(--text-light); text-align:center;'><i class='fas fa-spinner fa-spin'></i> Preparando plan de vuelo...</p>";
 
-    const [snapMod, snapTem, snapProg] = await Promise.all([
+    const [snapMod, snapTem, snapProg, snapProgMod] = await Promise.all([
         getDocs(query(collection(db, "modulos"), where("materia_id", "==", materiaId))),
         getDocs(collection(db, "temas_globales")),
-        getDocs(collection(db, "usuarios", usuarioActual.uid, "progreso_temas"))
+        getDocs(collection(db, "usuarios", usuarioActual.uid, "progreso_temas")),
+        getDocs(collection(db, "usuarios", usuarioActual.uid, "progreso_modulos"))
     ]);
 
     let modulos = []; snapMod.forEach(d => modulos.push({id: d.id, ...d.data()}));
@@ -1041,6 +1049,7 @@ window.cargarMateria = async function(materiaId, materiaNombre) {
     modulos = ordenarPorOrden(modulos, 'nombre');
     temas = ordenarPorOrden(temas, 'titulo');
     let mapaProgreso = {}; snapProg.forEach(d => mapaProgreso[d.id] = d.data().status);
+    let mapaProgresoModulos = {}; snapProgMod.forEach(d => mapaProgresoModulos[d.id] = d.data() || {});
 
     if(modulos.length === 0) {
         container.innerHTML = `<p style="color:var(--text-light); font-size:15px; text-align:center;">Aún no se han asignado módulos a esta materia.</p>`;
@@ -1061,11 +1070,14 @@ window.cargarMateria = async function(materiaId, materiaNombre) {
             if(st === 'green' || st === 'yellow') anyProgress = true;
         });
         
+        const requiereEvaluacion = Boolean(String(mod.archivo_evaluacion || '').trim());
+        const evaluacionCompletada = mapaProgresoModulos[mod.id]?.evaluacion_completada === true;
+
         let status = 'red';
-        if(allGreen) status = 'green';
-        else if(anyProgress) status = 'yellow';
-        
-        return { ...mod, status };
+        if(allGreen && (!requiereEvaluacion || evaluacionCompletada)) status = 'green';
+        else if(anyProgress || allGreen) status = 'yellow';
+
+        return { ...mod, status, evaluacionCompletada };
     });
 
     let indexActual = -1;
@@ -1110,14 +1122,17 @@ window.cargarModulo = async function(moduloId, moduloNombre, materiaId, materiaN
     const container = document.getElementById('modulo-temas-container');
     container.innerHTML = "<p style='color: var(--text-light);'><i class='fas fa-spinner fa-spin'></i> Preparando tu pista...</p>";
 
-    const [snapTem, snapProg] = await Promise.all([
+    const [snapTem, snapProg, snapProgModulo] = await Promise.all([
         getDocs(query(collection(db, "temas_globales"), where("modulo_id", "==", moduloId))),
-        getDocs(collection(db, "usuarios", usuarioActual.uid, "progreso_temas"))
+        getDocs(collection(db, "usuarios", usuarioActual.uid, "progreso_temas")),
+        getDoc(doc(db, "usuarios", usuarioActual.uid, "progreso_modulos", moduloId))
     ]);
 
     let temas = []; snapTem.forEach(d => temas.push({id: d.id, ...d.data()}));
     temas = ordenarPorOrden(temas, 'titulo');
     let mapaProgreso = {}; snapProg.forEach(d => mapaProgreso[d.id] = d.data().status);
+    const tieneEvaluacion = Boolean(String(archivoEval || '').trim());
+    const evaluacionCompletada = snapProgModulo.exists() && snapProgModulo.data()?.evaluacion_completada === true;
 
     if(temas.length === 0) {
         container.innerHTML = `<div class="instruction-card" style="text-align:center;"><i class="fas fa-road" style="font-size:28px;color:#94A3B8;"></i><p style="color:var(--text-light); font-size:14px; margin-bottom:0;">No hay estaciones en esta pista aún.</p></div>`;
@@ -1125,8 +1140,15 @@ window.cargarModulo = async function(moduloId, moduloNombre, materiaId, materiaN
     }
 
     const todosCompletados = temas.every(t => (mapaProgreso[t.id] || 'red') === 'green');
-    let indexActual = todosCompletados ? temas.length : temas.findIndex(t => (mapaProgreso[t.id] || 'red') !== 'green');
-    if(indexActual < 0) indexActual = temas.length;
+
+    let indexActual;
+    if(!todosCompletados) {
+        indexActual = temas.findIndex(t => (mapaProgreso[t.id] || 'red') !== 'green');
+    } else if(tieneEvaluacion && !evaluacionCompletada) {
+        indexActual = temas.length;
+    } else {
+        indexActual = temas.length + (tieneEvaluacion ? 1 : 0);
+    }
 
     // Determina si debe mostrarse el avance animado del carrito al regresar del tema.
     let pending = null;
@@ -1159,14 +1181,30 @@ window.cargarModulo = async function(moduloId, moduloNombre, materiaId, materiaN
         html += `<div class="pista-estacion" style="cursor:pointer;" data-topic-id="${t.id}" onclick="abrirTema('${t.id}', '${materiaId}', '${safeMatNombre}', '${safeModNombre}')">${cocheHtml}<div class="info-tema ${bgClass}">${t.titulo}</div></div>`;
     });
 
-    if(archivoEval) {
-        html += `<div class="pista-estacion">
-                <a href="${archivoEval}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; width:100%;">
-                    <div class="info-tema" style="background:linear-gradient(135deg,#1E3A8A,#2563EB); border-color:#60A5FA; color:white;">📝 Evaluación General</div>
-                </a></div>`;
+    if(tieneEvaluacion) {
+        const evalEsActual = indexActual === temas.length;
+        const evalCar = evalEsActual
+            ? `<div class="coche${debeAnimar ? ' coche-avanza' : ''}"${debeAnimar ? ` style="--car-distance:-${distancia}px"` : ''}>🏎️</div>`
+            : '';
+        const evalCodificada = encodeURIComponent(archivoEval);
+        const evalBloqueada = !todosCompletados;
+        const evalStyle = evaluacionCompletada
+            ? 'background:linear-gradient(135deg,#10B981,#059669); border-color:#047857; color:white;'
+            : (evalBloqueada
+                ? 'background:linear-gradient(135deg,#94A3B8,#64748B); border-color:#475569; color:white; opacity:.72;'
+                : 'background:linear-gradient(135deg,#1E3A8A,#2563EB); border-color:#60A5FA; color:white;');
+        const evalClick = evalBloqueada ? '' : `onclick="abrirEvaluacionModulo('${moduloId}', '${evalCodificada}')"`;
+        const evalCursor = evalBloqueada ? 'cursor:not-allowed;' : 'cursor:pointer;';
+        const evalTexto = evaluacionCompletada ? '✅ Evaluación General' : (evalBloqueada ? '🔒 Evaluación General' : '📝 Evaluación General');
+
+        html += `<div class="pista-estacion" data-eval-station="true" ${evalClick} style="${evalCursor}">
+                ${evalCar}
+                <div class="info-tema" style="${evalStyle}">${evalTexto}</div>
+            </div>`;
     }
 
-    const metaCar = indexActual === temas.length
+    const metaIndex = temas.length + (tieneEvaluacion ? 1 : 0);
+    const metaCar = indexActual === metaIndex
         ? `<div class="coche${debeAnimar ? ' coche-avanza' : ''}"${debeAnimar ? ` style="--car-distance:-${distancia}px"` : ''}>🏎️</div>`
         : '';
     html += `<div class="meta-bandera">${metaCar}<span>🏁</span><div style="margin-top:5px;">META</div></div></div>`;
@@ -1178,13 +1216,43 @@ window.cargarModulo = async function(moduloId, moduloNombre, materiaId, materiaN
         requestAnimationFrame(() => {
             const destino = indexActual < temas.length
                 ? container.querySelector(`[data-topic-id="${temas[indexActual].id}"]`)
-                : container.querySelector('.meta-bandera');
+                : (tieneEvaluacion && indexActual === temas.length
+                    ? container.querySelector('[data-eval-station="true"]')
+                    : container.querySelector('.meta-bandera'));
             destino?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
         });
     } else if(pending?.moduleId === moduloId) {
         sessionStorage.removeItem('pendingTrackAnimation');
     }
 }
+
+window.abrirEvaluacionModulo = async function(moduloId, urlCodificada) {
+    let url = "";
+    try { url = decodeURIComponent(urlCodificada || ""); } catch(_) { url = urlCodificada || ""; }
+    if(!url) return;
+
+    window.open(url, '_blank', 'noopener,noreferrer');
+
+    try {
+        await setDoc(doc(db, "usuarios", usuarioActual.uid, "progreso_modulos", moduloId), {
+            evaluacion_completada: true,
+            fecha_evaluacion: new Date().toISOString()
+        }, { merge: true });
+
+        if(moduloSeleccionado?.id === moduloId) {
+            await window.cargarModulo(
+                moduloSeleccionado.id,
+                moduloSeleccionado.nombre,
+                moduloSeleccionado.materiaId,
+                moduloSeleccionado.materiaNombre,
+                moduloSeleccionado.evaluacion
+            );
+        }
+    } catch(err) {
+        console.error("No se pudo registrar la evaluación del módulo:", err);
+        alert("La evaluación se abrió, pero no se pudo registrar el avance del módulo. Revisa tu conexión e inténtalo nuevamente.");
+    }
+};
 
 window.abrirTema = async function(temaId, matId, matNombre, modNombre) {
     try {
@@ -1429,12 +1497,21 @@ async function cargarDatosAdmin() {
             const data = d.data() || {};
             const nombre = data.nombre || 'Nombre pendiente';
             const email = data.email || d.id;
+            const uid = String(data.uid || '').trim();
+            const uidArg = encodeURIComponent(uid);
+            const emailArg = encodeURIComponent(email);
+            const nombreArg = encodeURIComponent(nombre);
             return `<div class="admin-list-row">
                 <div class="admin-row-main">
                     <strong>${escapeHTML(nombre)}</strong>
-                    <small>${escapeHTML(email)}</small>
+                    <small>${escapeHTML(email)}${uid ? '' : ' · UID pendiente hasta el próximo ingreso del alumno'}</small>
                 </div>
-                <button class="btn-danger admin-mini-btn" onclick="eliminarDocumento('alumnos_autorizados', '${d.id}')"><i class="fas fa-trash"></i></button>
+                <div class="admin-list-actions">
+                    <button class="btn-outline admin-mini-btn" ${uid ? '' : 'disabled'} onclick="verPruebasAlumno('${uidArg}','${emailArg}','${nombreArg}')" title="${uid ? 'Ver pruebas guardadas' : 'El alumno debe iniciar sesión una vez para asociar su UID'}">
+                        <i class="fas fa-clipboard-check"></i> Pruebas
+                    </button>
+                    <button class="btn-danger admin-mini-btn" onclick="eliminarDocumento('alumnos_autorizados', '${d.id}')"><i class="fas fa-trash"></i></button>
+                </div>
             </div>`;
         }).join('');
     }
@@ -1442,6 +1519,107 @@ async function cargarDatosAdmin() {
     // Si el organizador está visible, mantenlo sincronizado.
     if(!document.getElementById('admin-tab-organizar')?.classList.contains('hidden')) cargarOrganizador();
 }
+
+window.verPruebasAlumno = async function(uidCodificado, emailCodificado, nombreCodificado) {
+    const cont = document.getElementById('admin-lista-pruebas-alumno');
+    if(!cont) return;
+
+    const uid = decodeURIComponent(uidCodificado || '');
+    const email = decodeURIComponent(emailCodificado || '');
+    const nombre = decodeURIComponent(nombreCodificado || '');
+
+    if(!uid) {
+        cont.innerHTML = `<span style="color:var(--warning);font-size:12px;">El alumno debe iniciar sesión una vez para asociar su UID.</span>`;
+        return;
+    }
+
+    cont.innerHTML = `<p style="color:var(--text-light);font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Cargando pruebas de ${escapeHTML(nombre || email)}...</p>`;
+
+    try {
+        const snap = await getDocs(collection(db, "usuarios", uid, "simuladores_guardados"));
+        if(snap.empty) {
+            cont.innerHTML = `<p style="color:var(--text-light);font-size:12px;">${escapeHTML(nombre || email)} no tiene pruebas guardadas.</p>`;
+            return;
+        }
+
+        const intentos = snap.docs
+            .map(d => ({ id:d.id, ...d.data() }))
+            .sort((a,b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+
+        cont.innerHTML = `
+            <div style="margin-bottom:10px;font-size:13px;"><strong>${escapeHTML(nombre || email)}</strong> <span style="color:var(--text-light);">· ${escapeHTML(email)}</span></div>
+            ${intentos.map((data) => {
+                const fecha = data.fecha ? new Date(data.fecha) : null;
+                const fechaTxt = fecha && !Number.isNaN(fecha.getTime()) ? fecha.toLocaleString('es-EC') : 'Fecha no disponible';
+                const tema = data.tema_titulo || data.tema_id || 'Tema';
+                const puntaje = Number.isFinite(Number(data.puntaje)) && Number.isFinite(Number(data.total))
+                    ? `${Number(data.puntaje)}/${Number(data.total)}`
+                    : 'Sin puntaje';
+
+                return `<div class="admin-list-row" style="align-items:center;">
+                    <div class="admin-row-main">
+                        <strong>${escapeHTML(tema)}</strong>
+                        <small>${escapeHTML(fechaTxt)} · Resultado ${escapeHTML(puntaje)}</small>
+                    </div>
+                    <button class="btn-danger admin-mini-btn"
+                        onclick="eliminarPruebaAlumno('${encodeURIComponent(uid)}','${encodeURIComponent(data.id)}','${encodeURIComponent(data.tema_id || '')}','${encodeURIComponent(nombre || email)}')"
+                        title="Eliminar prueba y devolver el tema a En progreso">
+                        <i class="fas fa-trash"></i> Eliminar prueba
+                    </button>
+                </div>`;
+            }).join('')}
+        `;
+    } catch(err) {
+        console.error("Error cargando pruebas del alumno:", err);
+        cont.innerHTML = `<p style="color:var(--danger);font-size:12px;">No se pudieron cargar las pruebas. ${escapeHTML(err.message || '')}</p>`;
+    }
+};
+
+window.eliminarPruebaAlumno = async function(uidCodificado, intentoCodificado, temaCodificado, nombreCodificado) {
+    const uid = decodeURIComponent(uidCodificado || '');
+    const intentoId = decodeURIComponent(intentoCodificado || '');
+    const temaId = decodeURIComponent(temaCodificado || '');
+    const nombre = decodeURIComponent(nombreCodificado || '');
+
+    if(!uid || !intentoId) return;
+    if(!confirm(`¿Eliminar esta prueba de ${nombre || 'este alumno'}? El tema volverá a En progreso.`)) return;
+
+    try {
+        await deleteDoc(doc(db, "usuarios", uid, "simuladores_guardados", intentoId));
+
+        if(temaId) {
+            await setDoc(doc(db, "usuarios", uid, "progreso_temas", temaId), {
+                status: "yellow",
+                reiniciado_por_admin: true,
+                fecha_reinicio: new Date().toISOString()
+            }, { merge: true });
+
+            try {
+                const temaSnap = await getDoc(doc(db, "temas_globales", temaId));
+                const moduloId = temaSnap.exists() ? temaSnap.data()?.modulo_id : "";
+                if(moduloId) await deleteDoc(doc(db, "usuarios", uid, "progreso_modulos", moduloId));
+            } catch(errModulo) {
+                console.warn("No se pudo reiniciar el progreso de evaluación del módulo:", errModulo);
+            }
+        }
+
+        alert("Prueba eliminada. El tema volvió a En progreso.");
+
+        const alumnoSnap = await getDocs(collection(db, "alumnos_autorizados"));
+        const ficha = alumnoSnap.docs.find(d => String(d.data()?.uid || '') === uid);
+        const email = ficha?.data()?.email || ficha?.id || '';
+        const nombreFicha = ficha?.data()?.nombre || nombre || email;
+
+        await window.verPruebasAlumno(
+            encodeURIComponent(uid),
+            encodeURIComponent(email),
+            encodeURIComponent(nombreFicha)
+        );
+    } catch(err) {
+        console.error("No se pudo eliminar la prueba:", err);
+        alert("No se pudo eliminar la prueba: " + (err.message || "Error desconocido"));
+    }
+};
 
 window.eliminarDocumento = async function(coleccion, id) {
     if(confirm(`¿Estás seguro de eliminar este elemento definitivamente?`)) {
