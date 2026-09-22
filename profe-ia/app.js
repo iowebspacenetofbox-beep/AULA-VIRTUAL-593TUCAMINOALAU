@@ -16,12 +16,60 @@
     contextEl.textContent = partes.length ? partes.join(' › ') : (aulaContext.ruta || 'Aula virtual');
   });
 
+  function limpiarRespuestaIA(texto = '') {
+    // Algunos modelos de razonamiento pueden devolver bloques <think>. No los mostramos al alumno.
+    return String(texto)
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/^\s*<think>[\s\S]*$/i, '')
+      .trim();
+  }
+
+  async function renderizarMatematicas(elemento) {
+    // MathJax se carga de forma asíncrona. Esperamos un momento si todavía no está listo.
+    for(let i = 0; i < 40; i++) {
+      if(window.MathJax?.typesetPromise) {
+        try {
+          if(window.MathJax.startup?.promise) await window.MathJax.startup.promise;
+          await window.MathJax.typesetPromise([elemento]);
+        } catch(err) {
+          console.warn('No se pudo renderizar una fórmula del Profe IA:', err);
+        }
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
+  function renderizarRespuestaIA(bubble, text) {
+    const limpio = limpiarRespuestaIA(text);
+
+    if(window.marked && window.DOMPurify) {
+      try {
+        marked.setOptions({ gfm: true, breaks: true });
+        const html = marked.parse(limpio);
+        bubble.innerHTML = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+      } catch(err) {
+        console.warn('No se pudo renderizar Markdown:', err);
+        bubble.textContent = limpio;
+      }
+    } else {
+      bubble.textContent = limpio;
+    }
+
+    renderizarMatematicas(bubble);
+  }
+
   function addMessage(role, text, extraClass='') {
     const row = document.createElement('div');
     row.className = `msg ${role === 'user' ? 'user' : 'ai'}`;
     const bubble = document.createElement('div');
     bubble.className = `bubble ${extraClass}`;
-    bubble.textContent = text;
+
+    // El texto del alumno siempre va como texto plano.
+    // Las respuestas del Profe IA usan Markdown + MathJax de forma sanitizada.
+    if(role === 'assistant' && extraClass !== 'typing') renderizarRespuestaIA(bubble, text);
+    else bubble.textContent = text;
+
     row.appendChild(bubble);
     messagesEl.appendChild(row);
     messagesEl.scrollTop = messagesEl.scrollHeight;
