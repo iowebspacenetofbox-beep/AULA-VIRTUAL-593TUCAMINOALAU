@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAO_RcOstMWsdsHyawSaSsNrxnI5KNDaGU",
@@ -207,12 +207,20 @@ function renderPreguntas() {
 }
 
 async function calificar() {
+  const gradeBtn = document.getElementById("grade-btn");
+  if (gradeBtn?.disabled) return;
+  if (gradeBtn) gradeBtn.disabled = true;
+
   let aciertos = 0;
+  const respuestas = [];
 
   preguntas.forEach((p, i) => {
     const card = quizBox.querySelector(`[data-question="${i}"]`);
     const seleccionada = card.querySelector(`input[name="q${i}"]:checked`);
     const labels = [...card.querySelectorAll(".option")];
+    const valor = seleccionada ? Number(seleccionada.value) : null;
+
+    respuestas.push(Number.isInteger(valor) ? valor : null);
 
     labels.forEach(label => {
       label.classList.remove("correct", "wrong");
@@ -220,8 +228,7 @@ async function calificar() {
       if (idx === p.respuesta_correcta) label.classList.add("correct");
     });
 
-    if (seleccionada) {
-      const valor = Number(seleccionada.value);
+    if (Number.isInteger(valor)) {
       if (valor === p.respuesta_correcta) {
         aciertos++;
       } else {
@@ -235,6 +242,8 @@ async function calificar() {
 
   const total = preguntas.length;
   const porcentaje = Math.round((aciertos / total) * 100);
+  const dificultad = document.getElementById("difficulty")?.value || "media";
+  const fecha = new Date().toISOString();
 
   scoreBox.textContent = `${aciertos} / ${total}`;
   scoreText.textContent =
@@ -243,9 +252,53 @@ async function calificar() {
     `Obtuviste ${porcentaje}% de aciertos. Revisa las explicaciones, consulta dudas con Profe IA y genera otra práctica.`;
 
   resultBox.classList.remove("hidden");
-  document.getElementById("grade-btn").disabled = true;
   await typeset(quizBox);
   resultBox.scrollIntoView({ behavior:"smooth", block:"center" });
+
+  try {
+    // Guarda el intento y marca el tema como completado en una sola operación atómica.
+    // Si una de las dos escrituras falla, no se guarda ninguna a medias.
+    const batch = writeBatch(db);
+
+    const intentoRef = doc(collection(db, "usuarios", usuarioActual.uid, "simuladores_guardados"));
+    batch.set(intentoRef, {
+      tema_id: temaId,
+      materia_id: materiaId,
+      tema_titulo: temaActual?.titulo || "Tema",
+      materia_nombre: temaActual?.materia || "Materia",
+      modulo_nombre: temaActual?.modulo || "Módulo",
+      dificultad,
+      puntaje: aciertos,
+      total,
+      porcentaje,
+      respuestas,
+      preguntas: preguntas.map((p, i) => ({
+        enunciado: String(p.enunciado || ""),
+        opciones: Array.isArray(p.opciones) ? p.opciones.map(op => String(op)) : [],
+        respuesta_correcta: Number(p.respuesta_correcta),
+        respuesta_usuario: respuestas[i],
+        explicacion: String(p.explicacion || "")
+      })),
+      fecha
+    });
+
+    const progresoRef = doc(db, "usuarios", usuarioActual.uid, "progreso_temas", temaId);
+    batch.set(progresoRef, {
+      status: "green",
+      timestamp: fecha,
+      ultimo_simulador_id: intentoRef.id,
+      ultimo_puntaje: aciertos,
+      ultimo_total: total
+    }, { merge: true });
+
+    await batch.commit();
+
+    scoreText.textContent += " Tu práctica quedó guardada y este tema fue marcado como completado.";
+  } catch (err) {
+    console.error("No se pudo guardar la práctica:", err);
+    scoreText.textContent += " La práctica se calificó, pero no se pudo guardar. Vuelve a intentarlo antes de cerrar esta página.";
+    if (gradeBtn) gradeBtn.disabled = false;
+  }
 }
 
 newBtn.addEventListener("click", generarPractica);
