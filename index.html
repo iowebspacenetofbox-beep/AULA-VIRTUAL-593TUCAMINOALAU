@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>593 TucaminoalaU - Aula Virtual</title>
+    <!-- Marked.js para formatear Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Configuración e importación de MathJax para LaTeX -->
+    <script>
+      MathJax = {
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        }
+      };
+    </script>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <!-- FontAwesome para Iconos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- html2pdf para descargar resúmenes en PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #0B1220;
+            --primary-2: #111C33;
+            --primary-light: #2563EB;
+            --primary-soft: #EFF6FF;
+            --secondary: #7C3AED;
+            --success: #10B981;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --bg: #F4F7FB;
+            --card-bg: #FFFFFF;
+            --sidebar-width: 296px;
+            --text-dark: #172033;
+            --text-light: #64748B;
+            --border: #E2E8F0;
+            --border-strong: #CBD5E1;
+            --shadow-sm: 0 8px 24px rgba(15, 23, 42, 0.06);
+            --shadow-md: 0 18px 48px rgba(15, 23, 42, 0.10);
+            --shadow-lg: 0 28px 70px rgba(15, 23, 42, 0.16);
+            --radius-sm: 12px;
+            --radius-md: 18px;
+            --radius-lg: 26px;
+
+            --color-materia: #3B82F6;
+            --color-modulo: #8B5CF6;
+            --color-tema: #10B981;
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            margin: 0;
+            padding: 0;
+            background:
+                radial-gradient(circle at 8% 8%, rgba(37, 99, 235, 0.08), transparent 24rem),
+                radial-gradient(circle at 92% 92%, rgba(124, 58, 237, 0.07), transparent 28rem),
+                var(--bg);
+            color: var(--text-dark);
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+
+        .hidden { display: none !important; }
+
+        #app-layout {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        #sidebar {
+            width: var(--sidebar-width);
+            background:
+                radial-gradient(circle at 20% 0%, rgba(59, 130, 246, .20), transparent 22rem),
+                linear-gradient(180deg, #0B1220 0%, #111C33 55%, #0B1220 100%);
+            color: #E8EEF8;
+            display: flex;
+            flex-direction: column;
+            transition: width .34s cubic-bezier(.2,.8,.2,1), transform .34s cubic-bezier(.2,.8,.2,1);
+            z-index: 100;
+            flex-shrink: 0;
+            border-right: 1px solid rgba(255,255,255,.08);
+            white-space: nowrap;
+            box-shadow: 18px 0 45px rgba(15, 23, 42, .08);
+        }
+
+        #sidebar.collapsed {
+            width: 0 !important;
+            overflow: hidden;
+            border-right: none;
+        }
+
+        .sidebar-header {
+            min-height: 78px;
+            padding: 18px 16px;
+            background: rgba(255,255,255,.035);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            overflow: hidden;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+
+        .sidebar-brand {
+            color: #FFF;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        /* La marca ocupa el encabezado lateral en lugar del texto "Panel de navegación". */
+        .sidebar-brand img {
+            display: block;
+            width: 190px;
+            max-width: 100%;
+            height: 50px;
+            object-fit: contain;
+            object-position: left center;
+            border-radius: 10px;
+        }
+
+        .sidebar-brand::before { display: none; content: none; }
+
+        .btn-toggle-sidebar {
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.08);
+            color: #B6C2D6;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 7px 10px;
+            border-radius: 10px;
+            box-shadow: none;
+        }
+        .btn-toggle-sidebar:hover { color: white; background: rgba(255,255,255,.12); transform: none; }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px 11px 24px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,.18) transparent;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 14px;
+            color: #A9B7CC;
+            text-decoration: none;
+            border-radius: 12px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            transition: all .22s ease;
+            border: 1px solid transparent;
+        }
+        .nav-item:hover {
+            background: rgba(255,255,255,.07);
+            color: #FFF;
+            transform: translateX(2px);
+        }
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(37,99,235,.28), rgba(124,58,237,.18));
+            color: #FFF;
+            border-color: rgba(96,165,250,.24);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+        }
+        .nav-item i { margin-right: 12px; width: 20px; text-align: center; }
+
+        .tree-subject { margin-bottom: 5px; }
+        .tree-subject-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 11px 13px;
+            color: #73AEFF;
+            border-radius: 11px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 15px;
+            transition: .2s ease;
+        }
+        .tree-subject-header:hover { background: rgba(59,130,246,.11); transform: translateX(2px); }
+        .tree-subject-header .fa-chevron-down { transition: transform .25s ease; }
+        .tree-subject:has(.tree-modulos.open) .tree-subject-header .fa-chevron-down { transform: rotate(180deg); }
+
+        .tree-modulos,
+        .tree-topics {
+            display: block;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height .35s cubic-bezier(.2,.8,.2,1), opacity .24s ease;
+        }
+        .tree-modulos { padding-left: 14px; }
+        .tree-topics { padding-left: 14px; }
+        .tree-modulos.open, .tree-topics.open { max-height: 1800px; opacity: 1; }
+
+        .tree-modulo-header {
+            font-size: 13px;
+            color: #C4B5FD;
+            padding: 8px 11px;
+            cursor: pointer;
+            font-weight: 750;
+            margin-top: 4px;
+            border-radius: 9px;
+            transition: .2s ease;
+        }
+        .tree-modulo-header:hover { background: rgba(139,92,246,.12); color: #DDD6FE; transform: translateX(2px); }
+        .tree-topic-item {
+            padding: 7px 10px;
+            font-size: 12.5px;
+            color: #78E0B9;
+            border-radius: 8px;
+            cursor: pointer;
+            display: block;
+            text-decoration: none;
+            margin: 2px 0;
+            font-weight: 650;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: .2s ease;
+        }
+        .tree-topic-item:hover { color: #A7F3D0; background: rgba(16,185,129,.10); transform: translateX(2px); }
+
+        /* LAYOUT PRINCIPAL */
+        #main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background: transparent;
+            width: 100%;
+            scrollbar-width: thin;
+            scrollbar-color: #C7D2E2 transparent;
+        }
+
+        .top-navbar {
+            background: rgba(255,255,255,.86);
+            backdrop-filter: blur(16px) saturate(135%);
+            -webkit-backdrop-filter: blur(16px) saturate(135%);
+            padding: 12px 24px;
+            min-height: 66px;
+            border-bottom: 1px solid rgba(203,213,225,.72);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 90;
+            box-shadow: 0 8px 30px rgba(15,23,42,.035);
+        }
+        .top-navbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+        .content-container { padding: 34px 38px 48px; max-width: 1280px; margin: 0 auto; width: 100%; }
+        #top-title { margin: 0; font-size: 14px; font-weight: 800; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Botón global de regreso: aparece en todas las vistas excepto Inicio/Login. */
+        .btn-global-back {
+            background: rgba(255,255,255,.90);
+            color: #334155;
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 11px;
+            font-size: 13px;
+            font-weight: 800;
+            box-shadow: 0 4px 14px rgba(15,23,42,.05);
+            flex-shrink: 0;
+        }
+        .btn-global-back:hover {
+            background: #FFF;
+            color: #1D4ED8;
+            border-color: #BFDBFE;
+            box-shadow: 0 8px 20px rgba(37,99,235,.10);
+        }
+
+        .view-enter { animation: viewReveal .42s cubic-bezier(.2,.8,.2,1) both; }
+        @keyframes viewReveal {
+            from { opacity: 0; transform: translateY(10px) scale(.995); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* BOTONES */
+        button {
+            background: linear-gradient(135deg, var(--primary-light), #1D4ED8);
+            color: white;
+            border: 1px solid rgba(255,255,255,.10);
+            padding: 10px 18px;
+            border-radius: 11px;
+            cursor: pointer;
+            font-weight: 750;
+            font-size: 14px;
+            transition: transform .18s ease, box-shadow .18s ease, filter .18s ease, background .18s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 18px rgba(37,99,235,.16);
+        }
+        button:hover { filter: brightness(1.03); transform: translateY(-1px); box-shadow: 0 12px 24px rgba(37,99,235,.20); }
+        button:active { transform: translateY(0) scale(.985); }
+        button:disabled { background: #CBD5E1; color: #64748B; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        .btn-primary { background: linear-gradient(135deg, #2563EB, #1D4ED8); }
+        .btn-success { background: linear-gradient(135deg, #10B981, #059669); box-shadow: 0 8px 18px rgba(16,185,129,.16); }
+        .btn-success:hover { background: linear-gradient(135deg, #10B981, #047857); box-shadow: 0 12px 24px rgba(16,185,129,.20); }
+        .btn-danger { background: linear-gradient(135deg, #EF4444, #DC2626); box-shadow: 0 8px 18px rgba(239,68,68,.14); }
+        .btn-danger:hover { background: linear-gradient(135deg, #EF4444, #B91C1C); box-shadow: 0 12px 24px rgba(239,68,68,.20); }
+        .btn-outline {
+            background: rgba(255,255,255,.78);
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 14px rgba(15,23,42,.04);
+        }
+        .btn-outline:hover { background: #FFF; border-color: #C7D2E2; box-shadow: var(--shadow-sm); }
+
+        /* INICIO */
+        #view-inicio { max-width: 1320px; }
+        .home-shell { display: grid; gap: 24px; }
+        .home-hero {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: minmax(0, .88fr) minmax(420px, 1.12fr);
+            gap: 28px;
+            align-items: center;
+            padding: 34px;
+            border-radius: 30px;
+            background:
+                radial-gradient(circle at 14% 12%, rgba(59,130,246,.22), transparent 24rem),
+                radial-gradient(circle at 92% 92%, rgba(124,58,237,.16), transparent 22rem),
+                linear-gradient(135deg, #FFFFFF 0%, #F8FBFF 48%, #F4F2FF 100%);
+            border: 1px solid rgba(203,213,225,.72);
+            box-shadow: var(--shadow-md);
+        }
+        .home-hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,.40) 42%, transparent 58%);
+            transform: translateX(-110%);
+            animation: heroShine 8s ease-in-out infinite;
+        }
+        @keyframes heroShine { 0%,72% { transform: translateX(-110%); } 88%,100% { transform: translateX(110%); } }
+
+        .home-hero-copy { position: relative; z-index: 2; min-width: 0; }
+        /* Banner superior del inicio: ocupa todo el ancho del hero y conserva proporciones. */
+        .home-logo-wrap {
+            position: relative;
+            z-index: 2;
+            grid-column: 1 / -1;
+            width: fit-content;
+            max-width: 380px;
+            padding: 8px 0;
+            border-radius: 16px;
+            background: rgba(255,255,255,.82);
+            border: 1px solid rgba(255,255,255,.92);
+            box-shadow: 0 18px 45px rgba(37,99,235,.10);
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        .home-logo-wrap img {
+            display: block;
+            width: 70%;
+            max-width: none;
+            height: auto;
+            max-height: 100px;
+            object-fit: contain;
+            object-position: center;
+            border-radius: 15px;
+            margin: 0 auto;
+        }
+
+        .home-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 11px;
+            border-radius: 999px;
+            background: #EFF6FF;
+            color: #1D4ED8;
+            border: 1px solid #DBEAFE;
+            font-weight: 800;
+            font-size: 12px;
+            letter-spacing: .02em;
+            margin-bottom: 13px;
+        }
+
+        .titulo-animado {
+            font-size: clamp(36px, 4.4vw, 58px);
+            line-height: 1.02;
+            font-weight: 950;
+            letter-spacing: -.045em;
+            margin: 0 0 15px;
+            background: linear-gradient(100deg, #0F172A 0%, #2563EB 35%, #7C3AED 68%, #0F766E 100%);
+            background-size: 240% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientText 7s ease infinite;
+            text-shadow: 0 10px 35px rgba(37,99,235,.07);
+        }
+        @keyframes gradientText { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        .home-subtitle { color: #526174; font-size: 17px; line-height: 1.7; max-width: 560px; margin: 0 0 20px; }
+        .home-badges { display: flex; flex-wrap: wrap; gap: 9px; }
+        .home-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 11px;
+            border-radius: 11px;
+            background: rgba(255,255,255,.72);
+            border: 1px solid var(--border);
+            color: #475569;
+            font-size: 12px;
+            font-weight: 750;
+        }
+        .home-badge i { color: var(--primary-light); }
+
+        .home-video-card {
+            position: relative;
+            z-index: 2;
+            padding: 14px;
+            background: rgba(255,255,255,.76);
+            border: 1px solid rgba(255,255,255,.9);
+            border-radius: 24px;
+            box-shadow: 0 26px 60px rgba(15,23,42,.16);
+            backdrop-filter: blur(8px);
+        }
+        .home-video-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 6px 12px; }
+        .home-video-head strong { color: #1E293B; font-size: 14px; }
+        .home-video-head span { color: #64748B; font-size: 12px; }
+        .video-wrapper { position: relative; width: 100%; max-width: 100%; margin: 0; display: block; }
+        .video-box {
+            background: #020617;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 14px 32px rgba(2,6,23,.20);
+            width: 100%;
+        }
+        video { width: 100%; display: block; max-height: 520px; aspect-ratio: 16/9; object-fit: contain; background: #020617; }
+
+        .home-instructions {
+            background: rgba(255,255,255,.86);
+            border: 1px solid rgba(203,213,225,.76);
+            border-radius: 25px;
+            padding: 25px;
+            box-shadow: var(--shadow-sm);
+        }
+        .home-instructions-head { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
+        .home-instructions-head .icon {
+            width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center;
+            background: linear-gradient(135deg, #EFF6FF, #EDE9FE); color: #2563EB; font-size: 18px;
+        }
+        .home-instructions-head h3 { margin: 0; font-size: 18px; color: #0F172A; }
+        .home-instructions-head p { margin: 3px 0 0; color: #64748B; font-size: 12px; }
+        .home-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .home-step {
+            min-height: 132px;
+            padding: 17px;
+            border-radius: 18px;
+            border: 1px solid #E5EAF2;
+            background: linear-gradient(180deg, #FFFFFF, #FAFCFF);
+            transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+        }
+        .home-step:hover { transform: translateY(-4px); box-shadow: var(--shadow-sm); border-color: #D5DFEE; }
+        .home-step-number {
+            width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px;
+            background: #0F172A; color: white; font-size: 12px; font-weight: 900; margin-bottom: 12px;
+        }
+        .home-step strong { display: block; margin-bottom: 6px; color: #1E293B; font-size: 14px; }
+        .home-step p { margin: 0; color: #64748B; font-size: 13px; line-height: 1.55; }
+
+        /* TARJETAS Y FORMULARIOS */
+        .instruction-card {
+            background: rgba(255,255,255,.92);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(203,213,225,.72);
+            margin-top: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .instruction-card h3, .instruction-card h4 { letter-spacing: -.015em; }
+
+        .progress-legend {
+            display: flex;
+            gap: 16px;
+            background: rgba(255,255,255,.88);
+            padding: 14px 18px;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            box-shadow: var(--shadow-sm);
+        }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 750; color: #475569; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; box-shadow: 0 0 0 4px rgba(148,163,184,.10); }
+        .dot-green { background: var(--success); }
+        .dot-yellow { background: var(--warning); }
+        .dot-red { background: var(--danger); }
+
+        .input-group { margin-bottom: 16px; text-align: left; }
+        .input-group label { display: block; font-weight: 750; font-size: 13px; margin-bottom: 7px; color: #334155; }
+        .input-text, select, textarea {
+            width: 100%;
+            padding: 12px 13px;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            font-size: 14px;
+            box-sizing: border-box;
+            background: #FBFDFF;
+            color: var(--text-dark);
+            outline: none;
+            transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+        .input-text:focus, select:focus, textarea:focus {
+            border-color: #93B4F7;
+            background: #FFF;
+            box-shadow: 0 0 0 4px rgba(37,99,235,.09);
+        }
+
+        .login-card {
+            background: rgba(255,255,255,.92);
+            padding: 38px;
+            border-radius: 26px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255,255,255,.90);
+            max-width: 440px;
+            margin: 62px auto;
+            width: 100%;
+            text-align: center;
+            backdrop-filter: blur(12px);
+            animation: loginIn .5s cubic-bezier(.2,.8,.2,1) both;
+        }
+        @keyframes loginIn { from { opacity: 0; transform: translateY(15px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        /* PISTAS / PROGRESO */
+        .pista-container {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            align-items: center;
+            gap: 22px;
+            justify-content: flex-start;
+            padding: 78px 34px 66px;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.06), transparent 28%),
+                linear-gradient(180deg, #475569 0%, #334155 100%);
+            border-radius: 24px;
+            position: relative;
+            margin-top: 20px;
+            border: 6px solid #D7DEE8;
+            min-height: 230px;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), 0 22px 50px rgba(15,23,42,.15);
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,.34) rgba(15,23,42,.12);
+        }
+        .pista-container::before {
+            content: "";
+            position: absolute;
+            top: 50%; left: 0;
+            width: 100%; height: 7px;
+            background-image: linear-gradient(to right, #FFF 54%, transparent 54%);
+            background-size: 58px 100%;
+            transform: translateY(-50%);
+            z-index: 1;
+            opacity: .92;
+        }
+        .pista-container::after {
+            content: "";
+            position: absolute;
+            inset: 16px 0 auto;
+            height: 2px;
+            background: repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 18px, transparent 18px 36px);
+            pointer-events: none;
+        }
+        .pista-estacion {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+            min-width: 150px;
+            max-width: 190px;
+            flex: 1;
+            z-index: 2;
+            flex-shrink: 0;
+            position: relative;
+            transition: transform .22s ease;
+        }
+        .pista-estacion:hover { transform: translateY(-3px) scale(1.02); }
+
+        .coche {
+            font-size: 47px;
+            text-shadow: 2px 3px 8px rgba(0,0,0,.28);
+            position: absolute;
+            top: -62px;
+            z-index: 4;
+            transform: scaleX(-1);
+            display: inline-block;
+            filter: drop-shadow(0 8px 12px rgba(0,0,0,.25));
+            will-change: transform;
+        }
+        .coche:not(.coche-avanza):not(.avion) { animation: cocheIdle 2.4s ease-in-out infinite; }
+        @keyframes cocheIdle {
+            0%,100% { transform: translateY(0) scaleX(-1); }
+            50% { transform: translateY(-4px) scaleX(-1); }
+        }
+        .coche-avanza {
+            --car-distance: 190px;
+            animation: cocheAdvance 1.45s cubic-bezier(.22,.86,.25,1) both !important;
+        }
+        @keyframes cocheAdvance {
+            0% { transform: translateX(var(--car-distance)) translateY(2px) scaleX(-1) rotate(-2deg); filter: drop-shadow(0 8px 12px rgba(0,0,0,.24)); }
+            42% { transform: translateX(-45px) translateY(-7px) scaleX(-1) rotate(1deg); }
+            78% { transform: translateX(-10px) translateY(1px) scaleX(-1); }
+            100% { transform: translateX(0) translateY(0) scaleX(-1); }
+        }
+        .avion {
+            font-size: 56px;
+            top: -76px;
+            transform: scaleX(1);
+            animation: avionEntrada 1.05s cubic-bezier(.18,.85,.25,1) both, avionFlota 3.2s ease-in-out 1.05s infinite;
+        }
+        @keyframes avionEntrada { from { opacity: 0; transform: translateX(-80px) translateY(18px) scale(.78); } to { opacity: 1; transform: translateX(0) translateY(0) scale(1); } }
+        @keyframes avionFlota { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+
+        .info-tema {
+            padding: 15px 14px;
+            border-radius: 15px;
+            border: 3px solid;
+            font-size: 13px;
+            width: 100%;
+            font-weight: 850;
+            box-shadow: 0 12px 24px rgba(0,0,0,.20), inset 0 1px 0 rgba(255,255,255,.18);
+            word-wrap: break-word;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .info-tema::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(130deg, rgba(255,255,255,.14), transparent 45%);
+            pointer-events: none;
+        }
+        .estado-rojo { background: linear-gradient(135deg, #EF4444, #DC2626); border-color: #991B1B; }
+        .estado-amarillo { background: linear-gradient(135deg, #FBBF24, #F59E0B); border-color: #B45309; color: #3A2505; }
+        .estado-verde { background: linear-gradient(135deg, #10B981, #059669); border-color: #047857; }
+        .meta-bandera {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 900;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+            flex: 1;
+            min-width: 100px;
+            max-width: 130px;
+            min-height: 92px;
+        }
+        .meta-bandera span { font-size: 46px; filter: drop-shadow(2px 4px 7px rgba(0,0,0,.4)); }
+        .meta-bandera .coche { top: -58px; left: 50%; margin-left: -24px; }
+
+        /* PESTAÑAS */
+        .tabs-container {
+            display: flex;
+            gap: 7px;
+            margin-bottom: 22px;
+            overflow-x: auto;
+            padding: 6px;
+            background: rgba(255,255,255,.72);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            box-shadow: var(--shadow-sm);
+        }
+        .tab-btn {
+            background: transparent;
+            color: var(--text-light);
+            border: 1px solid transparent;
+            padding: 10px 16px;
+            font-weight: 750;
+            border-radius: 10px;
+            white-space: nowrap;
+            box-shadow: none;
+        }
+        .tab-btn:hover { background: #F8FAFC; color: #334155; box-shadow: none; transform: none; }
+        .tab-btn.active { background: #FFF; color: var(--primary-light); border-color: #DBEAFE; box-shadow: 0 6px 16px rgba(37,99,235,.09); }
+
+        .quiz-option {
+            background: #F8FAFC;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: .18s ease;
+        }
+        .quiz-option:hover { background: #FFF; border-color: #BFDBFE; transform: translateX(2px); }
+        .quiz-option input { transform: scale(1.15); }
+
+        .flex-horizontal { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; justify-content: flex-start; }
+        .enlace-lectura {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #0F172A, #1E293B);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 11px;
+            text-decoration: none;
+            font-weight: 700;
+            box-shadow: 0 7px 18px rgba(15,23,42,.12);
+            transition: .2s;
+        }
+        .enlace-lectura:hover { background: linear-gradient(135deg, #2563EB, #1D4ED8); transform: translateY(-2px); }
+
+        /* RECURSOS */
+        .btn-recurso {
+            background: linear-gradient(135deg, #0F172A 0%, #1D4ED8 100%);
+            color: white;
+            padding: 25px 20px;
+            font-size: 15px;
+            font-weight: 800;
+            border-radius: 18px;
+            border: 1px solid rgba(255,255,255,.10);
+            cursor: pointer;
+            width: calc(50% - 12px);
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 11px;
+            box-shadow: 0 14px 30px rgba(15,23,42,.13);
+            transition: all .28s cubic-bezier(.2,.8,.2,1);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-recurso::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.20), transparent 45%);
+            pointer-events: none;
+        }
+        .btn-recurso:hover { transform: translateY(-5px) scale(1.01); box-shadow: 0 20px 38px rgba(15,23,42,.18); filter: brightness(1.06); }
+        .btn-recurso i { font-size: 30px; }
+        .recurso-content {
+            padding: 26px;
+            background: rgba(255,255,255,.94);
+            border: 1px solid var(--border);
+            border-radius: 19px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow-sm);
+            animation: viewReveal .3s ease both;
+        }
+
+        /* CONTENIDO ENRIQUECIDO */
+        #tema-resumen {
+            line-height: 1.78 !important;
+            font-size: 15.5px !important;
+            background: linear-gradient(180deg, #FBFDFF, #F8FAFC) !important;
+            padding: 24px 26px !important;
+            border-radius: 15px !important;
+            border: 1px solid #E6ECF4;
+        }
+
+        /* Vista del estudiante: evita el espacio excesivo antes del primer bloque del resumen. */
+        #acc-textos .instruction-card > h4 {
+            margin: 0 0 12px !important;
+        }
+        #tema-resumen > :first-child {
+            margin-top: 0 !important;
+        }
+        #tema-resumen > :last-child {
+            margin-bottom: 0 !important;
+        }
+        #tema-resumen h1, #tema-resumen h2, #tema-resumen h3 {
+            color: #0F172A;
+            line-height: 1.25;
+            letter-spacing: -.02em;
+        }
+        #tema-resumen h1:first-child,
+        #tema-resumen h2:first-child,
+        #tema-resumen h3:first-child {
+            margin-top: 0 !important;
+        }
+        #tema-resumen h2 { margin-top: 1.35em; margin-bottom: .65em; }
+        #tema-resumen p { margin-top: .7em; margin-bottom: .7em; }
+        #tema-resumen blockquote {
+            margin: 18px 0;
+            padding: 14px 18px;
+            border-left: 4px solid #3B82F6;
+            background: #EFF6FF;
+            border-radius: 0 12px 12px 0;
+            color: #334155;
+        }
+        #tema-resumen table, #admin-editor-preview table, #admin-rich-editor table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        #tema-resumen th, #tema-resumen td, #admin-editor-preview th, #admin-editor-preview td, #admin-rich-editor th, #admin-rich-editor td { border: 1px solid #DCE4EF; padding: 9px 10px; vertical-align: top; }
+        #tema-resumen th, #admin-editor-preview th, #admin-rich-editor th { background: #F1F5F9; font-weight: 800; }
+        .rich-figure { margin: 18px auto; text-align: center; }
+        .rich-inline-image { max-width: min(100%, 780px); border-radius: 15px; cursor: zoom-in; box-shadow: 0 12px 30px rgba(15,23,42,.14); border: 1px solid #E2E8F0; }
+        .rich-figure figcaption { color: #64748B; font-size: 12px; margin-top: 8px; }
+        .concept-link {
+            display: inline;
+            padding: 0 !important;
+            margin: 0;
+            border: 0 !important;
+            border-radius: 0;
+            background: transparent !important;
+            color: #2563EB !important;
+            box-shadow: none !important;
+            font: inherit;
+            font-weight: 700;
+            line-height: inherit;
+            vertical-align: baseline;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            text-decoration: none;
+        }
+        .concept-link:hover {
+            background: transparent !important;
+            color: #1D4ED8 !important;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            transform: none !important;
+            box-shadow: none !important;
+            filter: none !important;
+        }
+
+        /* EDITOR VISUAL ADMIN */
+        .rich-editor-wrap {
+            border: 1px solid #DCE4EF;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #FFF;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+        }
+        .editor-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 9px;
+            background: linear-gradient(180deg, #FAFCFF, #F4F7FB);
+            border-bottom: 1px solid #E2E8F0;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        .editor-group { display: inline-flex; align-items: center; gap: 4px; padding-right: 6px; margin-right: 2px; border-right: 1px solid #DCE4EF; }
+        .editor-group:last-child { border-right: 0; }
+        .editor-toolbar button {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            justify-content: center;
+            border-radius: 9px;
+            background: #FFF;
+            color: #334155;
+            border: 1px solid #DCE4EF;
+            box-shadow: none;
+            font-size: 13px;
+        }
+        .editor-toolbar button:hover { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; transform: none; box-shadow: none; }
+        .editor-toolbar select {
+            width: auto;
+            min-width: 112px;
+            height: 34px;
+            padding: 5px 28px 5px 9px;
+            border-radius: 9px;
+            font-size: 12px;
+            background: #FFF;
+        }
+        .editor-color-label {
+            width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid #DCE4EF; border-radius: 9px; background: #FFF; cursor: pointer; position: relative; color: #334155;
+        }
+        .editor-color-label input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        #admin-rich-editor {
+            min-height: 320px;
+            max-height: 560px;
+            overflow: auto;
+            padding: 24px;
+            outline: none;
+            line-height: 1.72;
+            font-size: 15px;
+            color: #1E293B;
+            background: #FFF;
+        }
+        #admin-rich-editor:empty::before { content: attr(data-placeholder); color: #94A3B8; pointer-events: none; }
+        #admin-rich-editor:focus { box-shadow: inset 0 0 0 2px rgba(37,99,235,.12); }
+        .editor-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            border-top: 1px solid #E2E8F0;
+            background: #FAFCFF;
+        }
+        .editor-actions button { padding: 8px 11px; font-size: 12px; box-shadow: none; }
+        .editor-preview {
+            margin-top: 12px;
+            padding: 22px;
+            border: 1px dashed #BFD0E5;
+            border-radius: 14px;
+            background: #F8FBFF;
+            line-height: 1.72;
+        }
+        .admin-save-row { display: flex; gap: 10px; margin-top: 16px; }
+        .admin-save-row #btn-admin-guardar-tema { flex: 1; justify-content: center; padding: 12px; }
+
+        .admin-list-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 13px;
+            background: #F8FAFC;
+            border: 1px solid #E7EDF5;
+            border-radius: 11px;
+            margin-bottom: 8px;
+        }
+        .admin-list-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .admin-mini-btn { padding: 6px 9px !important; font-size: 11px !important; box-shadow: none !important; }
+
+
+        /* ADMINISTRACIÓN AMIGABLE Y ORDEN VISUAL */
+        .admin-help-banner {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 14px;
+            align-items: start;
+            padding: 16px 18px;
+            margin-bottom: 18px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #EFF6FF, #F5F3FF);
+            border: 1px solid #DCE7FA;
+            color: #334155;
+        }
+        .admin-help-banner > i { width: 38px; height: 38px; display:grid; place-items:center; border-radius:12px; background:#FFF; color:#2563EB; box-shadow:0 8px 18px rgba(37,99,235,.10); }
+        .admin-help-banner strong { display:block; color:#0F172A; margin-bottom:4px; }
+        .admin-help-banner p { margin:0; font-size:12.5px; line-height:1.55; color:#64748B; }
+        .admin-row-main { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }
+        .admin-row-main strong { color:#243047; overflow-wrap:anywhere; }
+        .admin-row-main small { color:#718096; font-size:11.5px; line-height:1.35; }
+        .admin-ordered-row { padding-left:10px; }
+        .admin-order-badge {
+            flex:0 0 34px; width:34px; height:34px; display:grid; place-items:center; border-radius:11px;
+            background:#DBEAFE; color:#1D4ED8; font-weight:900; font-size:12px; border:1px solid #BFDBFE;
+        }
+        .admin-order-badge.module { background:#EDE9FE; color:#6D28D9; border-color:#DDD6FE; }
+        .admin-order-badge.topic { background:#D1FAE5; color:#047857; border-color:#A7F3D0; }
+        .admin-group-block { margin-bottom:16px; padding:12px; border:1px solid #E7EDF5; border-radius:15px; background:#FBFDFF; }
+        .admin-group-title { display:flex; align-items:center; gap:8px; font-size:12px; font-weight:850; color:#475569; margin-bottom:9px; padding:3px 2px 8px; border-bottom:1px solid #EDF1F6; }
+        .admin-group-title i { color:#2563EB; }
+        .admin-group-title span { color:#94A3B8; }
+        .admin-group-title.warning { color:#B45309; }
+        .admin-chip { display:inline-flex; width:max-content; padding:3px 7px; border-radius:999px; background:#FEF3C7; color:#92400E; font-size:10.5px; font-weight:800; }
+        .admin-empty-state { display:flex; align-items:center; justify-content:center; gap:9px; min-height:80px; padding:18px; color:#64748B; text-align:center; border:1px dashed #CBD5E1; border-radius:13px; background:#F8FAFC; }
+        .admin-empty-state i { color:#94A3B8; }
+        .admin-empty-state.admin-error { color:#B91C1C; background:#FEF2F2; border-color:#FECACA; }
+
+        .organizer-intro { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px; }
+        .organizer-tip { padding:13px; border-radius:14px; border:1px solid #E2E8F0; background:#FFF; color:#64748B; font-size:12px; line-height:1.45; }
+        .organizer-tip strong { display:block; color:#1E293B; margin-bottom:4px; }
+        .organizer-tip i { color:#2563EB; margin-right:6px; }
+        #admin-organizador-estructura { display:grid; gap:15px; }
+        .organizer-subject-card { border:1px solid #DCE7FA; border-radius:18px; overflow:hidden; background:#FFF; box-shadow:0 8px 22px rgba(15,23,42,.05); }
+        .organizer-subject-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:15px 16px; background:linear-gradient(135deg,#EFF6FF,#F8FAFC); border-bottom:1px solid #E5ECF5; }
+        .organizer-kicker { font-size:10px; font-weight:900; letter-spacing:.08em; color:#64748B; margin-bottom:3px; }
+        .organizer-subject-head h4 { margin:0; display:flex; align-items:center; gap:8px; color:#1E3A8A; font-size:15px; }
+        .organizer-module-list { padding:12px; display:grid; gap:10px; }
+        .organizer-module-card { border:1px solid #E7E2FB; border-radius:14px; overflow:hidden; background:#FCFBFF; }
+        .organizer-module-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 11px; background:#F5F3FF; border-bottom:1px solid #EDE9FE; }
+        .organizer-item-name { min-width:0; display:flex; align-items:center; gap:8px; color:#334155; font-size:12.5px; }
+        .organizer-item-name i { color:#7C3AED; }
+        .organizer-item-name span:last-child { overflow-wrap:anywhere; }
+        .organizer-topic-list { padding:8px; display:grid; gap:6px; }
+        .organizer-topic-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 9px; border-radius:10px; background:#FFF; border:1px solid #E8EEF4; }
+        .organizer-dot { width:9px; height:9px; border-radius:50%; flex:0 0 9px; }
+        .organizer-dot-topic { background:#10B981; box-shadow:0 0 0 4px rgba(16,185,129,.10); }
+        .organizer-empty { padding:10px; color:#94A3B8; font-size:11.5px; text-align:center; }
+        .order-controls { display:inline-flex; align-items:center; gap:4px; flex-shrink:0; }
+        .order-btn { width:30px; height:30px; padding:0; display:grid; place-items:center; background:#FFF; color:#475569; border:1px solid #DCE4EF; border-radius:9px; box-shadow:none; }
+        .order-btn:hover { background:#EFF6FF; color:#1D4ED8; border-color:#BFDBFE; transform:none; box-shadow:none; }
+        .order-btn:disabled { opacity:.35; background:#F8FAFC; color:#94A3B8; }
+        .order-number { min-width:26px; text-align:center; font-size:11px; font-weight:900; color:#64748B; }
+        #admin-organizador-status { min-height:20px; text-align:center; font-size:12px; font-weight:750; margin-top:10px; }
+
+        /* MODALES */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(2,6,23,.68);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(7px);
+            padding: 20px;
+        }
+        .modal-overlay.active { display: flex; animation: modalFade .22s ease both; }
+        @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+        .modal-box {
+            background: white;
+            padding: 30px;
+            border-radius: 22px;
+            max-width: 680px;
+            width: 92%;
+            position: relative;
+            box-shadow: 0 30px 90px rgba(2,6,23,.38);
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalPop .28s cubic-bezier(.2,.8,.2,1) both;
+        }
+        @keyframes modalPop { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .modal-close {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: #FEE2E2;
+            color: #B91C1C;
+            border: 1px solid #FECACA;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 15px;
+            font-weight: bold;
+            transition: .2s;
+            box-shadow: none;
+        }
+        .modal-close:hover { background: #FECACA; transform: rotate(4deg); box-shadow: none; }
+        .modal-content-img img { max-width: 100%; border-radius: 14px; box-shadow: 0 14px 38px rgba(15,23,42,.16); }
+
+        @media (max-width: 1000px) {
+            .home-hero { grid-template-columns: 1fr; padding: 26px; }
+            .home-video-card { max-width: 820px; }
+            .home-steps { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            #sidebar { position: fixed; height: 100vh; }
+            #sidebar.collapsed { width: 0; }
+            .content-container { padding: 24px 16px 38px; }
+            .top-navbar { padding: 10px 12px; }
+            #user-display-name { display: none; }
+            .home-hero { padding: 20px; border-radius: 22px; }
+            .titulo-animado { font-size: clamp(34px, 11vw, 48px); }
+            .home-logo-wrap { padding: 9px 10px; }
+            .home-logo-wrap img { width: 100%; max-height: 150px; }
+            .btn-recurso { width: 100%; }
+            .pista-container { padding-left: 24px; padding-right: 24px; }
+            .admin-save-row { flex-direction: column; }
+            .organizer-intro { grid-template-columns: 1fr; }
+            .organizer-subject-head, .organizer-module-head, .organizer-topic-row { align-items:flex-start; }
+            .admin-list-row { align-items:flex-start; flex-wrap:wrap; }
+            .admin-list-actions { width:100%; justify-content:flex-end; }
+            .editor-toolbar { position: static; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .001ms !important;
+                animation-iteration-count: 1 !important;
+                scroll-behavior: auto !important;
+                transition-duration: .001ms !important;
+            }
+        }
+    
+        /* ==========================================
+           PROFE IA — PESTAÑA GLOBAL DESPLEGABLE
+           Prefijo ai-teacher-* para no interferir con el aula.
+        ========================================== */
+        .ai-teacher-launcher {
+            position: fixed;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 250;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 64px;
+            padding: 12px 10px;
+            border: 0;
+            border-radius: 18px 0 0 18px;
+            background: linear-gradient(145deg, #0F172A 0%, #1D4ED8 58%, #7C3AED 100%);
+            color: #FFF;
+            box-shadow: -10px 14px 36px rgba(15,23,42,.22);
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: .01em;
+            transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+        }
+        .ai-teacher-launcher:hover {
+            transform: translateY(-50%) translateX(-3px);
+            box-shadow: -14px 18px 42px rgba(37,99,235,.26);
+            filter: brightness(1.04);
+        }
+        .ai-teacher-launcher .ai-teacher-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 13px;
+            display: grid;
+            place-items: center;
+            background: rgba(255,255,255,.14);
+            border: 1px solid rgba(255,255,255,.20);
+            font-size: 20px;
+        }
+        .ai-teacher-panel {
+            position: fixed;
+            top: 74px;
+            right: 18px;
+            bottom: 18px;
+            width: min(430px, calc(100vw - 36px));
+            z-index: 260;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 24px;
+            background: #FFF;
+            border: 1px solid rgba(203,213,225,.84);
+            box-shadow: 0 30px 80px rgba(15,23,42,.28);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(calc(100% + 42px)) scale(.98);
+            transition: transform .28s cubic-bezier(.2,.8,.2,1), opacity .2s ease, visibility .2s ease;
+        }
+        .ai-teacher-panel.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0) scale(1);
+        }
+        .ai-teacher-panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 13px 14px;
+            color: #FFF;
+            background: linear-gradient(135deg, #0F172A, #1D4ED8 68%, #7C3AED);
+        }
+        .ai-teacher-panel-title {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .ai-teacher-panel-title .badge {
+            width: 38px;
+            height: 38px;
+            flex: 0 0 38px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: rgba(255,255,255,.14);
+            border: 1px solid rgba(255,255,255,.18);
+            font-size: 18px;
+        }
+        .ai-teacher-panel-title strong { display:block; font-size: 14px; }
+        .ai-teacher-panel-title span { display:block; margin-top:2px; font-size: 10px; color:#DBEAFE; font-weight:650; }
+        .ai-teacher-close {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.16);
+            box-shadow: none;
+            color: #FFF;
+        }
+        .ai-teacher-close:hover { background: rgba(255,255,255,.20); box-shadow:none; }
+        .ai-teacher-frame {
+            flex: 1;
+            width: 100%;
+            border: 0;
+            background: #F8FAFC;
+        }
+        @media (max-width: 640px) {
+            .ai-teacher-launcher {
+                top: auto;
+                bottom: 18px;
+                right: 12px;
+                transform: none;
+                min-width: 58px;
+                border-radius: 17px;
+                padding: 10px 9px;
+            }
+            .ai-teacher-launcher:hover { transform: translateY(-2px); }
+            .ai-teacher-panel {
+                inset: 10px;
+                width: auto;
+                border-radius: 20px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="app-layout">
+    <!-- BARRA LATERAL IZQUIERDA -->
+    <aside id="sidebar" class="hidden">
+        <div class="sidebar-header">
+            <a href="#" class="sidebar-brand" aria-label="593 TucaminoalaU">
+                <img src="imagenes/logo.png" alt="593 TucaminoalaU">
+            </a>
+            <!-- Botón de contraer seguro vía onclick nativo -->
+            <button class="btn-toggle-sidebar" id="btn-collapse-sidebar" title="Contraer menú" onclick="document.getElementById('sidebar').classList.add('collapsed'); document.getElementById('btn-expand-sidebar').classList.remove('hidden');"><i class="fas fa-chevron-left"></i></button>
+        </div>
+        
+        <div class="sidebar-nav">
+            <div class="nav-item active" id="nav-inicio" onclick="mostrarVista('view-inicio')">
+                <i class="fas fa-home"></i> Inicio
+            </div>
+            
+            <div style="padding: 15px 15px 10px 15px; font-size: 22px; font-weight: 900; color: #FFF; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;">
+                Materias
+            </div>
+            
+            <div id="sidebar-dynamic-content"></div>
+        </div>
+    </aside>
+
+    <!-- PANEL DERECHO -->
+    <main id="main-content">
+        <header class="top-navbar hidden" id="top-navbar">
+            <div class="top-navbar-left">
+                <!-- Botón de expandir seguro vía onclick nativo -->
+                <button class="btn-toggle-sidebar hidden" id="btn-expand-sidebar" title="Expandir menú" onclick="document.getElementById('sidebar').classList.remove('collapsed'); document.getElementById('btn-expand-sidebar').classList.add('hidden');"><i class="fas fa-chevron-right"></i></button>
+                <button class="btn-global-back hidden" id="btn-global-back" type="button" title="Regresar" aria-label="Regresar"><i class="fas fa-arrow-left"></i><span>Regresar</span></button>
+                <div id="top-title">Inicio</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 13px; font-weight: 700;" id="user-display-name">Usuario</span>
+                <button id="btn-ir-admin" class="btn-danger hidden" style="padding: 6px 12px; font-size: 12px;"><i class="fas fa-cog"></i> Admin</button>
+                <button class="btn-outline btn-logout" style="padding: 6px 12px; font-size: 12px;"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
+            </div>
+        </header>
+
+        <!-- 1. VISTA: LOGIN -->
+        <section id="view-login" class="content-container">
+            <div class="login-card">
+                <img src="imagenes/logo.png" alt="Logo" style="max-width: 150px; border-radius: 10px; margin-bottom: 15px;">
+                <h2 style="margin: 0 0 5px 0; color: var(--primary);">Aula virtual</h2>
+                <p style="color: var(--text-light); font-size: 14px; margin-bottom: 25px;">Inicio de Sesión</p>
+
+                <form id="form-login-email" onsubmit="return false;">
+                    <div class="input-group">
+                        <label>Correo Electrónico Autorizado</label>
+                        <input type="email" id="login-email" class="input-text" placeholder="estudiante@ejemplo.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="login-password" class="input-text" placeholder="••••••••" required>
+                    </div>
+                    <button id="btn-login-email" class="btn-primary" style="width: 100%; margin-top: 10px; justify-content: center; padding: 12px;">
+                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                    </button>
+                </form>
+                <div style="margin: 20px 0; color: var(--text-light); font-size: 12px;">O TAMBIÉN</div>
+                <button id="btn-login-google" class="btn-outline" style="width: 100%; justify-content: center; padding: 10px;">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" width="18" height="18" alt="Google"> Continuar con Google
+                </button>
+                <p id="login-error" class="hidden" style="color: var(--danger); font-size: 13px; margin-top: 20px; font-weight: 600;"></p>
+            </div>
+        </section>
+
+        <!-- 2. VISTA: INICIO -->
+        <section id="view-inicio" class="content-container hidden">
+            <div class="home-shell">
+                <div class="home-hero">
+                    <div class="home-hero-copy">
+                        <div class="home-eyebrow"><i class="fas fa-graduation-cap"></i> Aula Virtual 593 TucaminoalaU</div>
+                        <h1 class="titulo-animado">¡Bienvenido/a al Aula Virtual!</h1>
+                        <p class="home-subtitle">¡Prepara tu camino a la Universidad de forma interactiva!</p>
+                        <div class="home-badges" aria-label="Características del aula">
+                            <span class="home-badge"><i class="fas fa-route"></i> Progreso visual</span>
+                            <span class="home-badge"><i class="fas fa-book-open"></i> Contenido guiado</span>
+                            <span class="home-badge"><i class="fas fa-check-circle"></i> Simuladores</span>
+                        </div>
+                    </div>
+
+                    <div class="home-video-card">
+                        <div class="home-video-head">
+                            <strong><i class="fas fa-circle-play" style="color:var(--primary-light); margin-right:6px;"></i> Introducción al aula</strong>
+                            <span>Empieza por aquí</span>
+                        </div>
+                        <div class="video-wrapper">
+                            <div class="video-box">
+                                <video controls preload="metadata">
+                                    <source src="videos/introduccion.mp4" type="video/mp4">
+                                    Tu navegador no soporta la reproducción de video HTML5.
+                                </video>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="home-instructions">
+                    <div class="home-instructions-head">
+                        <div class="icon"><i class="fas fa-compass"></i></div>
+                        <div>
+                            <h3>Cómo usar el aula virtual</h3>
+                            <p>Sigue esta ruta para estudiar en orden y registrar correctamente tu progreso.</p>
+                        </div>
+                    </div>
+                    <div class="home-steps">
+                        <div class="home-step">
+                            <div class="home-step-number">01</div>
+                            <strong>Elige una materia</strong>
+                            <p>Abre el menú lateral y selecciona la materia que vas a estudiar. Verás sus módulos organizados en tu plan de vuelo.</p>
+                        </div>
+                        <div class="home-step">
+                            <div class="home-step-number">02</div>
+                            <strong>Entra al módulo</strong>
+                            <p>Selecciona un módulo para abrir la pista. El carrito indica el punto de la ruta en el que debes continuar.</p>
+                        </div>
+                        <div class="home-step">
+                            <div class="home-step-number">03</div>
+                            <strong>Estudia el tema</strong>
+                            <p>Abre cada tema y revisa sus textos, videos, imágenes, lecturas y demás recursos disponibles antes de evaluarte.</p>
+                        </div>
+                        <div class="home-step">
+                            <div class="home-step-number">04</div>
+                            <strong>Realiza el simulador</strong>
+                            <p>Cuando estés listo, entra en Evaluación (Simulador). Al completar y enviar la evaluación, el tema pasa a completado.</p>
+                        </div>
+                        <div class="home-step">
+                            <div class="home-step-number">05</div>
+                            <strong>Regresa y continúa</strong>
+                            <p>Vuelve al módulo después de completar un tema. Verás el avance del carrito hacia la siguiente estación o hasta la meta.</p>
+                        </div>
+                        <div class="home-step">
+                            <div class="home-step-number">06</div>
+                            <strong>Lee los colores</strong>
+                            <p><b>Rojo:</b> pendiente · <b>Amarillo:</b> en progreso · <b>Verde:</b> completado. Un módulo queda completado cuando todos sus temas están verdes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2.5 VISTA NUEVA: PLAN DE VUELO DE LA MATERIA (MÓDULOS) -->
+        <section id="view-materia" class="content-container hidden">
+            <h2 id="materia-titulo" style="font-size: 32px; color: var(--color-materia); margin-top: 0;"></h2>
+            <p style="color: var(--text-light); font-size: 16px;">Plan de vuelo: Completa todos los módulos para dominar esta materia.</p>
+
+            <div id="materia-modulos-container"></div>
+
+            <div class="progress-legend" style="margin-top: 30px; margin-bottom: 0;">
+                <div class="legend-item"><span class="dot dot-green"></span> Módulo Completado</div>
+                <div class="legend-item"><span class="dot dot-yellow"></span> Módulo En Progreso</div>
+                <div class="legend-item"><span class="dot dot-red"></span> Módulo Sin Empezar</div>
+            </div>
+        </section>
+
+        <!-- 3. VISTA: MÓDULO (PISTA DE CARRERAS) -->
+        <section id="view-modulo" class="content-container hidden">
+            <h2 id="modulo-titulo" style="font-size: 28px; color: var(--color-modulo); margin-top: 0;"></h2>
+            <p style="color: var(--text-light);">Avanza por la autopista completando los temas hasta llegar a la meta.</p>
+
+            <div id="modulo-temas-container"></div>
+
+            <div class="progress-legend" style="margin-top: 30px; margin-bottom: 0;">
+                <div class="legend-item"><span class="dot dot-green"></span> Completado</div>
+                <div class="legend-item"><span class="dot dot-yellow"></span> En Progreso (Tu ubicación actual)</div>
+                <div class="legend-item"><span class="dot dot-red"></span> No Completado</div>
+            </div>
+        </section>
+
+        <!-- 4. VISTA: DETALLE DEL TEMA -->
+        <section id="view-tema" class="content-container hidden">
+            <!-- La navegación de regreso se controla únicamente con el botón global de la barra superior. -->
+            
+            <!-- TÍTULO DEL TEMA -->
+            <h2 style="font-size: 28px; color: var(--color-tema); margin-top: 0; text-align: left;">Tema: <span id="tema-titulo"></span></h2>
+            
+            <!-- SUBTÍTULO DINÁMICO -->
+            <h3 id="subtitulo-recursos" style="text-align: center; color: var(--primary); font-size: 22px; margin-bottom: 25px; border-bottom: 2px solid var(--border); padding-bottom: 10px;">Recursos de aprendizaje</h3>
+
+            <!-- MENÚ HORIZONTAL DE RECURSOS -->
+            <div id="menu-recursos" class="flex-horizontal" style="justify-content: center; gap: 20px;">
+                <button class="btn-recurso" onclick="mostrarRecurso('acc-textos', 'Resumen y Textos')">
+                    <i class="fas fa-book-open"></i> <span>1. Resumen y Textos</span>
+                </button>
+                <button class="btn-recurso" onclick="mostrarRecurso('acc-videos', 'Videos Explicativos')">
+                    <i class="fas fa-video"></i> <span>2. Videos Explicativos</span>
+                </button>
+                <button class="btn-recurso" onclick="mostrarRecurso('acc-imagenes', 'Imágenes y Gráficos')">
+                    <i class="fas fa-images"></i> <span>3. Imágenes y Gráficos</span>
+                </button>
+                <button class="btn-recurso" onclick="mostrarRecurso('acc-evaluacion', 'Ejercicios para prácticas')">
+                    <i class="fas fa-list-check"></i> <span>4. Ejercicios para prácticas</span>
+                </button>
+            </div>
+
+            <!-- CONTENIDO: TEXTOS -->
+            <div id="acc-textos" class="recurso-content hidden">
+                <div class="instruction-card" style="margin-top: 0; border: none; box-shadow: none; padding: 0;">
+                    <h4 style="margin: 0 0 16px; color: var(--primary-light); font-size: 23px; text-align: center; font-weight: 900;">Resumen</h4>
+                    <div id="tema-resumen" style="line-height: 1.7; font-size: 15px; background: #F8FAFC; padding: 20px; border-radius: 8px;"></div>
+                    <button id="btn-descargar-pdf" class="btn-danger" style="margin-top: 20px;"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+                </div>
+                
+                <div class="instruction-card" style="border: none; box-shadow: none; padding: 20px 0 0 0;">
+                    <h4 style="margin: 0 0 16px; color: var(--primary-light); font-size: 23px; text-align: center; font-weight: 900;">Lecturas Sugeridas</h4>
+                    <div id="tema-lecturas-list" class="flex-horizontal"></div>
+                </div>
+            </div>
+
+            <!-- CONTENIDO: VIDEOS -->
+            <div id="acc-videos" class="recurso-content hidden">
+                <div class="instruction-card" style="margin-top: 0; border: none; box-shadow: none; padding: 0;">
+                    <div id="tema-videos-list" class="flex-horizontal"></div>
+                    
+                    <!-- SECCIÓN LABORATORIO -->
+                    <div id="seccion-laboratorio" class="hidden" style="margin-top: 35px; border-top: 2px solid var(--border); padding-top: 25px; text-align: center;">
+                        <h4 style="color: var(--primary); font-size: 20px; margin-top: 0; margin-bottom: 15px;">Laboratorio Práctico</h4>
+                        <div id="contenedor-video-laboratorio" style="display: flex; justify-content: center; width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTENIDO: IMÁGENES -->
+            <div id="acc-imagenes" class="recurso-content hidden">
+                <div class="instruction-card" style="margin-top: 0; border: none; box-shadow: none; padding: 0;">
+                    <div id="tema-imagenes-list" class="flex-horizontal" style="justify-content: center;"></div>
+                </div>
+            </div>
+
+            <!-- CONTENIDO: EVALUACIÓN -->
+            <div id="acc-evaluacion" class="recurso-content hidden">
+                <div class="instruction-card" style="margin-top: 0; background: #EFF6FF; border-color: #BFDBFE;">
+                    <h3 style="margin-top: 0; color: #1E3A8A;">Simulador del Tema</h3>
+                    <p style="color: var(--text-dark); margin-bottom: 15px;">Haz clic en el botón para dirigirte a la plataforma de evaluación de este tema.</p>
+                    <button id="btn-generar-simulador" class="btn-primary" style="background: var(--primary-light); padding: 12px 25px; font-size: 15px;">
+                        <i class="fas fa-play"></i> Ir a los Simuladores
+                    </button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <div id="lista-simuladores-guardados" style="display: grid; gap:10px;"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. VISTA: SIMULADOR -->
+        <section id="view-quiz" class="content-container hidden">
+            <div class="instruction-card" style="text-align: center; margin-bottom: 25px;">
+                <h2 style="margin: 0; color: var(--color-tema);" id="quiz-titulo">Evaluación</h2>
+                <p style="color: var(--text-light);" id="quiz-subtitulo"></p>
+            </div>
+            <div id="quiz-preguntas-container"></div>
+            <button id="btn-enviar-quiz" class="btn-success" style="width: 100%; padding: 15px; font-size: 16px; justify-content: center; margin-top: 20px;">
+                <i class="fas fa-check-circle"></i> Calificar Examen
+            </button>
+            <div id="quiz-resultado" class="instruction-card hidden" style="text-align: center; margin-top: 20px; border-color: var(--success);"></div>
+        </section>
+
+        <!-- 6. VISTA: ADMINISTRACIÓN -->
+        <section id="view-admin" class="content-container hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: var(--primary);"><i class="fas fa-shield-alt" style="color: var(--danger);"></i> Control Total del Aula</h2>
+                <button class="btn-outline" onclick="mostrarVista('view-inicio')"><i class="fas fa-eye"></i> Vista Alumno</button>
+            </div>
+
+            <div class="admin-help-banner">
+                <i class="fas fa-wand-magic-sparkles"></i>
+                <div>
+                    <strong>Administración más sencilla</strong>
+                    <p>Crea materias, módulos y temas normalmente. El nuevo contenido se coloca automáticamente al final. Para cambiar el orden, usa las flechas de cada lista o la pestaña <b>Organizar estructura</b>; no necesitas calcular ni escribir números de orden.</p>
+                </div>
+            </div>
+
+            <div class="tabs-container">
+                <button class="tab-btn active" onclick="switchAdminTab('materias')"><i class="fas fa-book"></i> 1. Materias</button>
+                <button class="tab-btn" onclick="switchAdminTab('modulos')"><i class="fas fa-layer-group"></i> 2. Módulos</button>
+                <button class="tab-btn" onclick="switchAdminTab('temas')"><i class="fas fa-file-lines"></i> 3. Temas</button>
+                <button class="tab-btn" onclick="switchAdminTab('organizar')"><i class="fas fa-arrow-down-wide-short"></i> 4. Organizar estructura</button>
+                <button class="tab-btn" onclick="switchAdminTab('alumnos')"><i class="fas fa-users"></i> Alumnos Permitidos</button>
+            </div>
+
+            <!-- Tab: Materias -->
+            <div id="admin-tab-materias" class="tab-content">
+                <div class="instruction-card" style="margin-top: 0;">
+                    <h3>Crear Materia</h3>
+                    <p style="margin:-4px 0 16px;color:var(--text-light);font-size:12px;line-height:1.5;">Escribe el nombre y guárdala. La materia se añadirá automáticamente al final; luego puedes moverla con las flechas.</p>
+                    <div class="input-group">
+                        <label>Nombre de la Materia</label>
+                        <input type="text" id="admin-nueva-materia" class="input-text" placeholder="Ej: Química, Física...">
+                    </div>
+                    <button id="btn-crear-materia" class="btn-success"><i class="fas fa-plus"></i> Crear Materia</button>
+                </div>
+                <div class="instruction-card">
+                    <h3>Materias Existentes</h3>
+                    <div id="admin-lista-materias">Cargando...</div>
+                </div>
+            </div>
+
+            <!-- Tab: Módulos -->
+            <div id="admin-tab-modulos" class="tab-content hidden">
+                <div class="instruction-card" style="margin-top: 0;">
+                    <h3>Crear Módulo / Capítulo</h3>
+                    <p style="margin:-4px 0 16px;color:var(--text-light);font-size:12px;line-height:1.5;">Primero elige la materia. El nuevo módulo se colocará automáticamente al final de esa materia.</p>
+                    <div class="input-group">
+                        <label>Selecciona la Materia</label>
+                        <select id="admin-select-materia-modulo" class="input-text"></select>
+                    </div>
+                    <div class="input-group">
+                        <label>Nombre del Módulo / Capítulo</label>
+                        <input type="text" id="admin-nuevo-modulo" class="input-text" placeholder="Ej: Módulo 1: Termodinámica">
+                    </div>
+                    <div class="input-group">
+                        <label>URL Evaluación Final (Opcional - Archivo HTML)</label>
+                        <input type="text" id="admin-nuevo-modulo-eval" class="input-text" placeholder="Ej: examen_fisica.html">
+                    </div>
+                    <button id="btn-crear-modulo" class="btn-success"><i class="fas fa-plus"></i> Crear Módulo</button>
+                </div>
+                <div class="instruction-card">
+                    <h3>Módulos / Capítulos Existentes</h3>
+                    <p style="margin:-4px 0 14px;color:var(--text-light);font-size:12px;">Usa las flechas para cambiar su posición dentro de cada materia.</p>
+                    <div id="admin-lista-modulos">Cargando...</div>
+                </div>
+            </div>
+
+            <!-- Tab: Temas -->
+            <div id="admin-tab-temas" class="tab-content hidden">
+                <div class="instruction-card" style="margin-top: 0;">
+                    <h3>Crear Nuevo Tema</h3>
+                    <p style="margin:-4px 0 16px;color:var(--text-light);font-size:12px;line-height:1.5;">Selecciona materia y módulo. El tema nuevo se añadirá al final y podrás moverlo después sin escribir números.</p>
+                    <div class="input-group">
+                        <label>1. Materia</label>
+                        <select id="admin-tema-materia" class="input-text"></select>
+                    </div>
+                    <div class="input-group">
+                        <label>2. Módulo</label>
+                        <select id="admin-tema-modulo" class="input-text">
+                            <option value="">Selecciona primero una materia</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Título del Tema</label>
+                        <input type="text" id="admin-tema-titulo" class="input-text" placeholder="Ej: Leyes de Newton">
+                    </div>
+                    <div class="input-group">
+                        <label style="color:var(--primary-light);">Resumen y Síntesis</label>
+                        <div style="font-size:12px; color:var(--text-light); margin:-2px 0 9px; line-height:1.55;">
+                            Editor visual: da formato, inserta enlaces, imágenes, fórmulas, conceptos y tablas sin escribir código.
+                        </div>
+
+                        <div class="rich-editor-wrap">
+                            <div class="editor-toolbar" aria-label="Herramientas de formato">
+                                <div class="editor-group">
+                                    <select id="editor-formato" title="Tipo de texto" onchange="editorAplicarBloque(this.value); this.value='p';">
+                                        <option value="p">Párrafo</option>
+                                        <option value="h2">Título</option>
+                                        <option value="h3">Subtítulo</option>
+                                        <option value="blockquote">Cita</option>
+                                    </select>
+                                </div>
+                                <div class="editor-group">
+                                    <button type="button" title="Negrita" onclick="editorCommand('bold')"><i class="fas fa-bold"></i></button>
+                                    <button type="button" title="Cursiva" onclick="editorCommand('italic')"><i class="fas fa-italic"></i></button>
+                                    <button type="button" title="Subrayado" onclick="editorCommand('underline')"><i class="fas fa-underline"></i></button>
+                                    <button type="button" title="Tachado" onclick="editorCommand('strikeThrough')"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" title="Subíndice" onclick="editorCommand('subscript')"><span style="font-weight:900;">X₂</span></button>
+                                    <button type="button" title="Superíndice" onclick="editorCommand('superscript')"><span style="font-weight:900;">X²</span></button>
+                                </div>
+                                <div class="editor-group">
+                                    <button type="button" title="Lista con viñetas" onclick="editorCommand('insertUnorderedList')"><i class="fas fa-list-ul"></i></button>
+                                    <button type="button" title="Lista numerada" onclick="editorCommand('insertOrderedList')"><i class="fas fa-list-ol"></i></button>
+                                </div>
+                                <div class="editor-group">
+                                    <button type="button" title="Alinear a la izquierda" onclick="editorCommand('justifyLeft')"><i class="fas fa-align-left"></i></button>
+                                    <button type="button" title="Centrar" onclick="editorCommand('justifyCenter')"><i class="fas fa-align-center"></i></button>
+                                    <button type="button" title="Alinear a la derecha" onclick="editorCommand('justifyRight')"><i class="fas fa-align-right"></i></button>
+                                    <button type="button" title="Justificar" onclick="editorCommand('justifyFull')"><i class="fas fa-align-justify"></i></button>
+                                </div>
+                                <div class="editor-group">
+                                    <label class="editor-color-label" title="Color de texto"><i class="fas fa-font"></i><input type="color" value="#1E293B" onchange="editorColorTexto(this.value)"></label>
+                                    <label class="editor-color-label" title="Resaltado"><i class="fas fa-highlighter"></i><input type="color" value="#FEF08A" onchange="editorResaltado(this.value)"></label>
+                                </div>
+                                <div class="editor-group">
+                                    <button type="button" title="Deshacer" onclick="editorCommand('undo')"><i class="fas fa-rotate-left"></i></button>
+                                    <button type="button" title="Rehacer" onclick="editorCommand('redo')"><i class="fas fa-rotate-right"></i></button>
+                                    <button type="button" title="Quitar formato" onclick="editorCommand('removeFormat')"><i class="fas fa-eraser"></i></button>
+                                </div>
+                            </div>
+
+                            <div id="admin-rich-editor" contenteditable="true" spellcheck="true" data-placeholder="Escribe aquí el contenido del tema. Puedes formatearlo como en un procesador de texto..."></div>
+                            <textarea id="admin-tema-resumen" class="hidden"></textarea>
+
+                            <div class="editor-actions">
+                                <button type="button" class="btn-outline" onclick="editorInsertarEnlace()"><i class="fas fa-link"></i> Enlace</button>
+                                <button type="button" class="btn-outline" onclick="editorInsertarImagen()"><i class="fas fa-image"></i> Imagen</button>
+                                <button type="button" class="btn-outline" onclick="editorInsertarFormula()"><i class="fas fa-square-root-variable"></i> Fórmula</button>
+                                <button type="button" class="btn-outline" onclick="editorInsertarConcepto()"><i class="fas fa-circle-info"></i> Concepto emergente</button>
+                                <button type="button" class="btn-outline" onclick="editorInsertarTabla()"><i class="fas fa-table"></i> Tabla</button>
+                                <button type="button" class="btn-outline" onclick="editorInsertarSeparador()"><i class="fas fa-minus"></i> Separador</button>
+                                <button type="button" class="btn-outline" onclick="toggleEditorPreview()"><i class="fas fa-eye"></i> Vista previa</button>
+                            </div>
+                        </div>
+                        <div id="admin-editor-preview" class="editor-preview hidden"></div>
+                    </div>
+                    <div class="input-group">
+                        <label>Lecturas Recomendadas (Un enlace por línea: Título http...)</label>
+                        <textarea id="admin-tema-lecturas" rows="2" placeholder="Documento extra https://..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>Videos Recomendados (Un enlace de YouTube por línea)</label>
+                        <textarea id="admin-tema-videos" rows="2" placeholder="https://youtube.com/watch?v=..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>Video de Laboratorio (URL - Solo aparecerá en la materia Química)</label>
+                        <input type="text" id="admin-tema-laboratorio" class="input-text" placeholder="https://youtube.com/watch?v=...">
+                    </div>
+                    <div class="input-group">
+                        <label>Imágenes (Un nombre de archivo por línea con su extensión)</label>
+                        <textarea id="admin-tema-imagenes" rows="2" placeholder="ejemplo1.jpg&#10;grafico2.png"></textarea>
+                    </div>
+                    <div class="admin-save-row">
+                        <button id="btn-admin-guardar-tema" class="btn-success">
+                            <i class="fas fa-save"></i> Publicar Tema
+                        </button>
+                        <button id="btn-admin-cancelar-edicion" class="btn-outline hidden" type="button">
+                            <i class="fas fa-xmark"></i> Cancelar edición
+                        </button>
+                    </div>
+                    <div id="admin-status" style="margin-top: 10px; font-weight: 700; text-align: center;"></div>
+                </div>
+                <div class="instruction-card">
+                    <h3>Temas Publicados</h3>
+                    <p style="margin:-4px 0 14px;color:var(--text-light);font-size:12px;">Puedes editar un tema o cambiar su posición dentro del módulo con las flechas.</p>
+                    <div id="admin-lista-temas">Cargando...</div>
+                </div>
+            </div>
+
+            <!-- Tab: Organizar estructura -->
+            <div id="admin-tab-organizar" class="tab-content hidden">
+                <div class="instruction-card" style="margin-top:0;">
+                    <h3 style="margin-top:0;"><i class="fas fa-arrow-down-wide-short" style="color:var(--primary-light);"></i> Organizar la estructura del aula</h3>
+                    <p style="color:var(--text-light);font-size:13px;line-height:1.6;margin-bottom:16px;">Aquí ves la jerarquía completa tal como la encontrará el estudiante. Usa <b>↑</b> y <b>↓</b> para mover cada elemento. Los cambios se guardan inmediatamente y se reflejan en el menú, el plan de vuelo y la pista.</p>
+                    <div class="organizer-intro">
+                        <div class="organizer-tip"><strong><i class="fas fa-book"></i> Materias</strong>Se ordenan entre sí en el menú lateral.</div>
+                        <div class="organizer-tip"><strong><i class="fas fa-layer-group"></i> Módulos / capítulos</strong>Se ordenan únicamente dentro de su materia.</div>
+                        <div class="organizer-tip"><strong><i class="fas fa-file-lines"></i> Temas</strong>Se ordenan únicamente dentro de su módulo.</div>
+                    </div>
+                    <div id="admin-organizador-estructura"></div>
+                    <div id="admin-organizador-status"></div>
+                </div>
+            </div>
+
+            <!-- Tab: Alumnos -->
+            <div id="admin-tab-alumnos" class="tab-content hidden">
+                <div class="instruction-card" style="margin-top: 0;">
+                    <h3>Añadir Alumno Autorizado</h3>
+                    <p style="margin:-4px 0 14px;color:var(--text-light);font-size:12px;line-height:1.5;">Asocia un nombre al correo. Ese nombre será el que el estudiante verá en la esquina superior derecha al iniciar sesión.</p>
+                    <div style="display: grid; grid-template-columns: minmax(180px,.8fr) minmax(240px,1.2fr) auto; gap: 10px; margin-bottom: 20px; align-items:center;">
+                        <input type="text" id="admin-nuevo-alumno-nombre" class="input-text" placeholder="Nombre del estudiante" autocomplete="off">
+                        <input type="email" id="admin-nuevo-alumno-email" class="input-text" placeholder="estudiante@gmail.com">
+                        <button id="btn-admin-agregar-alumno" class="btn-success"><i class="fas fa-user-plus"></i> Autorizar</button>
+                    </div>
+                    <h4>Alumnos Autorizados</h4>
+                    <div id="admin-lista-alumnos">Cargando...</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+
+<!-- PROFE IA: pestaña global desplegable.
+     El iframe apunta a la app independiente incluida en /profe-ia/. -->
+<button id="ai-teacher-launcher"
+        class="ai-teacher-launcher hidden"
+        type="button"
+        onclick="toggleProfeIA(true)"
+        title="Abrir Profe IA"
+        aria-label="Abrir Profe IA">
+    <span class="ai-teacher-icon"><i class="fas fa-chalkboard-user"></i></span>
+    <span>Profe IA</span>
+</button>
+
+<aside id="ai-teacher-panel" class="ai-teacher-panel" aria-label="Profe IA">
+    <div class="ai-teacher-panel-head">
+        <div class="ai-teacher-panel-title">
+            <span class="badge"><i class="fas fa-chalkboard-user"></i></span>
+            <div>
+                <strong>Profe IA 593</strong>
+                <span>Consulta mientras estudias</span>
+            </div>
+        </div>
+        <button type="button" class="ai-teacher-close" onclick="toggleProfeIA(false)" aria-label="Cerrar Profe IA">
+            <i class="fas fa-xmark"></i>
+        </button>
+    </div>
+    <iframe id="ai-teacher-frame"
+            class="ai-teacher-frame"
+            src="./profe-ia/index.html"
+            title="Profe IA"
+            loading="lazy"></iframe>
+</aside>
+
+<!-- CONTENEDOR DEL MODAL SUPERPUESTO (GLOBAL) -->
+<div id="custom-modal" class="modal-overlay">
+    <div class="modal-box">
+        <button class="modal-close" onclick="cerrarModal()"><i class="fas fa-times"></i></button>
+        <div id="modal-body" style="margin-top: 10px;"></div>
+    </div>
+</div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>
