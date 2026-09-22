@@ -12,6 +12,8 @@
 
   let aulaContext = {};
   let history = [];
+  let requestInFlight = false;
+  let editandoRow = null;
 
   function guardarHistorialLocal() {
     try {
@@ -44,11 +46,14 @@
     messagesEl.querySelectorAll('.msg').forEach(el => el.remove());
   }
 
+  function renderizarHistorialActual() {
+    limpiarMensajesVisuales();
+    history.forEach((item, index) => addMessage(item.role, item.content, '', index));
+  }
+
   async function restaurarHistorialVisual() {
     history = cargarHistorialLocal();
-    for(const item of history) {
-      addMessage(item.role, item.content);
-    }
+    renderizarHistorialActual();
     if(history.length) {
       statusEl.textContent = 'Chat restaurado desde la memoria de este equipo.';
       await new Promise(resolve => requestAnimationFrame(resolve));
@@ -204,7 +209,104 @@
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  function addMessage(role, text, extraClass='') {
+  function setEditButtonsDisabled(disabled) {
+    messagesEl.querySelectorAll('.edit-message-btn').forEach(btn => { btn.disabled = disabled; });
+  }
+
+  function obtenerWorkerUrl() {
+    return String(window.PROFE_IA_CONFIG?.WORKER_URL || '').trim();
+  }
+
+  function workerConfigurado(workerUrl = obtenerWorkerUrl()) {
+    return Boolean(workerUrl && !workerUrl.includes('PEGA_AQUI'));
+  }
+
+  function abrirEditorMensaje(historyIndex, row) {
+    if(requestInFlight) {
+      statusEl.textContent = 'Espera a que termine la respuesta actual antes de editar una pregunta.';
+      return;
+    }
+
+    const actual = history[historyIndex];
+    if(!actual || actual.role !== 'user') return;
+
+    // Solo mantiene un editor abierto a la vez.
+    if(editandoRow && editandoRow !== row) renderizarHistorialActual();
+    editandoRow = row;
+
+    row.innerHTML = '';
+    const box = document.createElement('div');
+    box.className = 'edit-message-box';
+
+    const textarea = document.createElement('textarea');
+    textarea.value = actual.content;
+    textarea.maxLength = 4000;
+    textarea.setAttribute('aria-label', 'Editar pregunta');
+
+    const actions = document.createElement('div');
+    actions.className = 'edit-message-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'edit-message-cancel';
+    cancelBtn.textContent = 'Cancelar';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'edit-message-save';
+    saveBtn.textContent = 'Guardar y reenviar';
+
+    cancelBtn.addEventListener('click', () => {
+      editandoRow = null;
+      renderizarHistorialActual();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      const edited = textarea.value.trim();
+      if(!edited) {
+        statusEl.innerHTML = '<span class="error">La pregunta no puede quedar vacía.</span>';
+        textarea.focus();
+        return;
+      }
+
+      const workerUrl = obtenerWorkerUrl();
+      if(!workerConfigurado(workerUrl)) {
+        statusEl.innerHTML = '<span class="error">Falta configurar la URL del Cloudflare Worker en profe-ia/config.js.</span>';
+        return;
+      }
+
+      if(edited === actual.content) {
+        editandoRow = null;
+        renderizarHistorialActual();
+        return;
+      }
+
+      // Editar una pregunta crea una nueva rama coherente: elimina esa pregunta y
+      // las respuestas posteriores, conserva lo anterior y vuelve a consultar al Profe IA.
+      history = history.slice(0, historyIndex);
+      guardarHistorialLocal();
+      editandoRow = null;
+      renderizarHistorialActual();
+      statusEl.textContent = 'Pregunta editada. Generando una nueva respuesta...';
+      await enviarTexto(edited, workerUrl);
+    });
+
+    textarea.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape') cancelBtn.click();
+      if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        saveBtn.click();
+      }
+    });
+
+    actions.append(cancelBtn, saveBtn);
+    box.append(textarea, actions);
+    row.appendChild(box);
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  }
+
+  function addMessage(role, text, extraClass='', historyIndex=null) {
     const row = document.createElement('div');
     row.className = `msg ${role === 'user' ? 'user' : 'ai'}`;
     const bubble = document.createElement('div');
@@ -215,6 +317,17 @@
       renderizarRespuestaIA(bubble, text);
     } else {
       bubble.textContent = text;
+    }
+
+    if(role === 'user' && Number.isInteger(historyIndex)) {
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'edit-message-btn';
+      editBtn.title = 'Editar pregunta';
+      editBtn.setAttribute('aria-label', 'Editar pregunta');
+      editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+      editBtn.addEventListener('click', () => abrirEditorMensaje(historyIndex, row));
+      row.appendChild(editBtn);
     }
 
     row.appendChild(bubble);
@@ -228,24 +341,23 @@
     inputEl.style.height = Math.min(inputEl.scrollHeight, 130) + 'px';
   }
 
-  async function send() {
-    const text = inputEl.value.trim();
-    if(!text) return;
+  async function enviarTexto(text, workerUrl = obtenerWorkerUrl()) {
+    text = String(text || '').trim();
+    if(!text || requestInFlight) return;
 
-    const workerUrl = String(window.PROFE_IA_CONFIG?.WORKER_URL || '').trim();
-    if(!workerUrl || workerUrl.includes('PEGA_AQUI')) {
+    if(!workerConfigurado(workerUrl)) {
       statusEl.innerHTML = '<span class="error">Falta configurar la URL del Cloudflare Worker en profe-ia/config.js.</span>';
       return;
     }
 
-    inputEl.value = '';
-    autoResize();
-    addMessage('user', text);
+    requestInFlight = true;
     history.push({ role:'user', content:text });
     guardarHistorialLocal();
+    addMessage('user', text, '', history.length - 1);
 
     sendEl.disabled = true;
     inputEl.disabled = true;
+    setEditButtonsDisabled(true);
     statusEl.textContent = 'El Profe IA está pensando...';
     const typing = addMessage('ai', 'Pensando…', 'typing');
 
@@ -263,19 +375,37 @@
 
       const reply = String(data.reply || '').trim() || 'No recibí una respuesta válida. Intenta de nuevo.';
       typing.remove();
-      addMessage('assistant', reply);
       history.push({ role:'assistant', content:reply });
       guardarHistorialLocal();
+      addMessage('assistant', reply, '', history.length - 1);
       statusEl.textContent = 'Listo. Puedes seguir preguntando sobre el mismo tema.';
     } catch(error) {
       typing.remove();
       addMessage('assistant', `No pude conectar con el Profe IA: ${error.message}`);
       statusEl.innerHTML = '<span class="error">Revisa la URL del Worker, el origen permitido y las variables de Cloudflare.</span>';
     } finally {
+      requestInFlight = false;
       sendEl.disabled = false;
       inputEl.disabled = false;
+      setEditButtonsDisabled(false);
       inputEl.focus();
     }
+  }
+
+  async function send() {
+    if(requestInFlight) return;
+    const text = inputEl.value.trim();
+    if(!text) return;
+
+    const workerUrl = obtenerWorkerUrl();
+    if(!workerConfigurado(workerUrl)) {
+      statusEl.innerHTML = '<span class="error">Falta configurar la URL del Cloudflare Worker en profe-ia/config.js.</span>';
+      return;
+    }
+
+    inputEl.value = '';
+    autoResize();
+    await enviarTexto(text, workerUrl);
   }
 
   inputEl.addEventListener('input', autoResize);
