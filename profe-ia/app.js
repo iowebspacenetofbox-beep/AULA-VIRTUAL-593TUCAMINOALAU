@@ -4,9 +4,68 @@
   const sendEl = document.getElementById('send');
   const statusEl = document.getElementById('status');
   const contextEl = document.getElementById('context-text');
+  const newChatEl = document.getElementById('new-chat');
+
+  const STORAGE_KEY = 'profeIA593_chat_local_v1';
+  const MAX_LOCAL_MESSAGES = 100;
+  const MAX_CONTEXT_MESSAGES = 20;
 
   let aulaContext = {};
-  const history = [];
+  let history = [];
+
+  function guardarHistorialLocal() {
+    try {
+      const limpio = history
+        .filter(m => m && ['user','assistant'].includes(m.role) && String(m.content || '').trim())
+        .slice(-MAX_LOCAL_MESSAGES)
+        .map(m => ({ role:m.role, content:String(m.content).slice(0, 8000) }));
+      history = limpio;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(limpio));
+    } catch(err) {
+      console.warn('No se pudo guardar la memoria local del Profe IA:', err);
+    }
+  }
+
+  function cargarHistorialLocal() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const data = raw ? JSON.parse(raw) : [];
+      if(!Array.isArray(data)) return [];
+      return data
+        .filter(m => m && ['user','assistant'].includes(m.role) && typeof m.content === 'string' && m.content.trim())
+        .slice(-MAX_LOCAL_MESSAGES);
+    } catch(err) {
+      console.warn('No se pudo leer la memoria local del Profe IA:', err);
+      return [];
+    }
+  }
+
+  function limpiarMensajesVisuales() {
+    messagesEl.querySelectorAll('.msg').forEach(el => el.remove());
+  }
+
+  async function restaurarHistorialVisual() {
+    history = cargarHistorialLocal();
+    for(const item of history) {
+      addMessage(item.role, item.content);
+    }
+    if(history.length) {
+      statusEl.textContent = 'Chat restaurado desde la memoria de este equipo.';
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+  }
+
+  function nuevoChat() {
+    if(history.length && !confirm('¿Iniciar un chat nuevo? Se borrará la conversación guardada en este equipo.')) return;
+    history = [];
+    try { localStorage.removeItem(STORAGE_KEY); } catch(_) {}
+    limpiarMensajesVisuales();
+    inputEl.value = '';
+    autoResize();
+    statusEl.textContent = 'Nuevo chat iniciado. La memoria anterior de este equipo fue borrada.';
+    inputEl.focus();
+  }
 
   window.addEventListener('message', (event) => {
     const data = event.data;
@@ -183,6 +242,7 @@
     autoResize();
     addMessage('user', text);
     history.push({ role:'user', content:text });
+    guardarHistorialLocal();
 
     sendEl.disabled = true;
     inputEl.disabled = true;
@@ -193,7 +253,7 @@
       const response = await fetch(workerUrl, {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ messages: history.slice(-12), context: aulaContext })
+        body: JSON.stringify({ messages: history.slice(-MAX_CONTEXT_MESSAGES), context: aulaContext })
       });
 
       let data = {};
@@ -205,6 +265,7 @@
       typing.remove();
       addMessage('assistant', reply);
       history.push({ role:'assistant', content:reply });
+      guardarHistorialLocal();
       statusEl.textContent = 'Listo. Puedes seguir preguntando sobre el mismo tema.';
     } catch(error) {
       typing.remove();
@@ -225,4 +286,8 @@
     }
   });
   sendEl.addEventListener('click', send);
+  newChatEl?.addEventListener('click', nuevoChat);
+
+  // Recupera automáticamente la conversación guardada en este navegador/equipo.
+  restaurarHistorialVisual();
 })();
