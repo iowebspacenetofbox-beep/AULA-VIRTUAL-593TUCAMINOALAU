@@ -126,41 +126,117 @@ Formato exacto:
     const endpoint =
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(env.GEMINI_API_KEY)}`;
 
-    let geminiResponse;
-    try {
-      geminiResponse = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }]
-            }
-          ],
-          generationConfig: {
-            temperature: 0.8,
-            responseMimeType: "application/json"
-          }
-        })
-      });
-    } catch (err) {
-      console.error("Error de red Gemini:", err);
-      return jsonResponse({ error: "No se pudo conectar con Gemini." }, 502, origin, env);
-    }
+    const requestBody = JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.8,
+        responseMimeType: "application/json"
+      }
+    });
 
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const maxAttempts = 3;
+    let geminiResponse = null;
     let geminiData = {};
-    try {
-      geminiData = await geminiResponse.json();
-    } catch (_) {}
 
-    if (!geminiResponse.ok) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        geminiResponse = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody
+        });
+      } catch (err) {
+        console.error(`Error de red Gemini (intento ${attempt}/${maxAttempts}):`, err);
+
+        if (attempt < maxAttempts) {
+          await sleep(attempt === 1 ? 1500 : 3000);
+          continue;
+        }
+
+        return jsonResponse(
+          { error: "Elix AI no pudo conectarse en este momento. Intenta nuevamente en unos segundos." },
+          502,
+          origin,
+          env
+        );
+      }
+
+      geminiData = {};
+      try {
+        geminiData = await geminiResponse.json();
+      } catch (_) {}
+
+      if (geminiResponse.ok) break;
+
       const apiMessage =
         geminiData?.error?.message ||
         `Gemini respondió con error ${geminiResponse.status}.`;
 
-      console.error("Gemini API error:", apiMessage);
-      return jsonResponse({ error: apiMessage }, 502, origin, env);
+      console.error(`Gemini API error (intento ${attempt}/${maxAttempts}):`, apiMessage);
+
+      const lowerMessage = apiMessage.toLowerCase();
+      const isQuotaProblem =
+        lowerMessage.includes("quota") ||
+        lowerMessage.includes("billing") ||
+        lowerMessage.includes("daily limit");
+
+      const isTemporaryProblem =
+        [429, 500, 502, 503, 504].includes(geminiResponse.status) ||
+        lowerMessage.includes("high demand") ||
+        lowerMessage.includes("overloaded") ||
+        lowerMessage.includes("try again later") ||
+        lowerMessage.includes("temporarily unavailable");
+
+      if (isTemporaryProblem && !isQuotaProblem && attempt < maxAttempts) {
+        const retryAfter = Number(geminiResponse.headers.get("Retry-After"));
+        const fallbackDelay = attempt === 1 ? 1500 : 3000;
+        const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+          ? Math.min(retryAfter * 1000, 5000)
+          : fallbackDelay;
+
+        await sleep(waitMs);
+        continue;
+      }
+
+      if (isTemporaryProblem && !isQuotaProblem) {
+        return jsonResponse(
+          { error: "Elix AI está temporalmente ocupado. Intentamos varias veces automáticamente. Intenta nuevamente en unos segundos." },
+          503,
+          origin,
+          env
+        );
+      }
+
+      if (isQuotaProblem) {
+        return jsonResponse(
+          { error: "Elix AI alcanzó temporalmente un límite de uso de la API. Intenta nuevamente más tarde." },
+          429,
+          origin,
+          env
+        );
+      }
+
+      return jsonResponse(
+        { error: "No se pudo generar la práctica en este momento. Intenta nuevamente." },
+        502,
+        origin,
+        env
+      );
+    }
+
+    if (!geminiResponse?.ok) {
+      return jsonResponse(
+        { error: "Elix AI está temporalmente ocupado. Intenta nuevamente en unos segundos." },
+        503,
+        origin,
+        env
+      );
     }
 
     const text = (geminiData?.candidates?.[0]?.content?.parts || [])
