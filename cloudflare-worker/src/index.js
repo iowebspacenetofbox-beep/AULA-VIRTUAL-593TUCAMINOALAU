@@ -114,7 +114,7 @@ export default {
           ...messages
         ],
         temperature: 0.35,
-        max_tokens: 1000
+        max_tokens: 10000
       })
     });
 
