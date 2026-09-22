@@ -1,3 +1,3 @@
 window.SIMULADORES_IA_CONFIG = {
-  WORKER_URL: "PEGA_AQUI_LA_URL_DE_TU_WORKER_GEMINI"
+  WORKER_URL: "https://simulador-ia-593.io-web-space-neto-f-box.workers.dev"
 };
