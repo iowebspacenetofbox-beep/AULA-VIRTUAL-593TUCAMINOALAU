@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAO_RcOstMWsdsHyawSaSsNrxnI5KNDaGU",
@@ -31,7 +31,6 @@ const newBtn = document.getElementById("new-btn");
 let temaActual = null;
 let usuarioActual = null;
 let preguntas = [];
-let dificultadActual = "media";
 
 function setStatus(message, type = "") {
   statusBox.textContent = message;
@@ -99,7 +98,6 @@ async function cargarContexto() {
     titulo: tema.titulo || "Tema",
     materia: materia.nombre || "Materia",
     modulo: modulo.nombre || "Módulo",
-    moduloId: tema.modulo_id || "",
     resumen: String(tema.resumen_teorico || "").slice(0, 10000)
   };
 
@@ -147,7 +145,6 @@ async function generarPractica() {
   try {
     const cantidad = Number(document.getElementById("count").value);
     const dificultad = document.getElementById("difficulty").value;
-    dificultadActual = dificultad;
 
     const res = await fetch(workerUrl(), {
       method: "POST",
@@ -209,66 +206,13 @@ function renderPreguntas() {
   quizBox.scrollIntoView({ behavior:"smooth", block:"start" });
 }
 
-async function guardarIntentoPractica({ respuestas, puntaje, total, porcentaje }) {
-  if (!usuarioActual?.uid || !temaActual?.temaId) {
-    throw new Error("No hay una sesión o tema válido para guardar esta práctica.");
-  }
-
-  const intento = {
-    tipo: "practica_ia",
-    version: 2,
-    tema_id: temaActual.temaId,
-    tema_titulo: temaActual.titulo || "Tema",
-    materia_id: temaActual.materiaId || "",
-    materia_nombre: temaActual.materia || "Materia",
-    modulo_id: temaActual.moduloId || "",
-    modulo_nombre: temaActual.modulo || "Módulo",
-    dificultad: dificultadActual || "media",
-    puntaje,
-    total,
-    porcentaje,
-    preguntas: preguntas.map((p) => ({
-      enunciado: String(p.enunciado || ""),
-      opciones: Array.isArray(p.opciones) ? p.opciones.map((op) => String(op)) : [],
-      respuesta_correcta: Number(p.respuesta_correcta),
-      explicacion: String(p.explicacion || "")
-    })),
-    respuestas: respuestas.map((r) => Number.isInteger(r) ? r : null),
-    fecha: new Date().toISOString(),
-    usuario_email: usuarioActual.email || ""
-  };
-
-  const ref = collection(db, "usuarios", usuarioActual.uid, "simuladores_guardados");
-  const guardado = await addDoc(ref, intento);
-
-  // Avisa a la pestaña del aula para que refresque el historial en cuanto el alumno vuelva.
-  try {
-    localStorage.setItem("simuladorGuardado", JSON.stringify({
-      uid: usuarioActual.uid,
-      temaId: temaActual.temaId,
-      intentoId: guardado.id,
-      timestamp: Date.now()
-    }));
-  } catch (_) {}
-
-  return guardado.id;
-}
-
 async function calificar() {
-  const gradeBtn = document.getElementById("grade-btn");
-  if (gradeBtn?.disabled) return;
-  if (gradeBtn) gradeBtn.disabled = true;
-
   let aciertos = 0;
-  const respuestas = [];
 
   preguntas.forEach((p, i) => {
     const card = quizBox.querySelector(`[data-question="${i}"]`);
     const seleccionada = card.querySelector(`input[name="q${i}"]:checked`);
     const labels = [...card.querySelectorAll(".option")];
-
-    const valor = seleccionada ? Number(seleccionada.value) : null;
-    respuestas.push(Number.isInteger(valor) ? valor : null);
 
     labels.forEach(label => {
       label.classList.remove("correct", "wrong");
@@ -276,7 +220,8 @@ async function calificar() {
       if (idx === p.respuesta_correcta) label.classList.add("correct");
     });
 
-    if (Number.isInteger(valor)) {
+    if (seleccionada) {
+      const valor = Number(seleccionada.value);
       if (valor === p.respuesta_correcta) {
         aciertos++;
       } else {
@@ -292,23 +237,15 @@ async function calificar() {
   const porcentaje = Math.round((aciertos / total) * 100);
 
   scoreBox.textContent = `${aciertos} / ${total}`;
-  const textoBase =
+  scoreText.textContent =
     porcentaje >= 80 ? `Muy buen trabajo: ${porcentaje}% de aciertos.` :
     porcentaje >= 60 ? `Vas avanzando: ${porcentaje}% de aciertos. Revisa las explicaciones.` :
-    `Obtuviste ${porcentaje}% de aciertos. Revisa las explicaciones y genera otra práctica.`;
+    `Obtuviste ${porcentaje}% de aciertos. Revisa las explicaciones, consulta dudas con Profe IA y genera otra práctica.`;
 
-  scoreText.textContent = `${textoBase} Guardando esta práctica en tu historial...`;
   resultBox.classList.remove("hidden");
+  document.getElementById("grade-btn").disabled = true;
   await typeset(quizBox);
   resultBox.scrollIntoView({ behavior:"smooth", block:"center" });
-
-  try {
-    await guardarIntentoPractica({ respuestas, puntaje: aciertos, total, porcentaje });
-    scoreText.textContent = `${textoBase} Esta práctica quedó guardada en tu historial para que puedas revisarla después.`;
-  } catch (err) {
-    console.error("No se pudo guardar la práctica:", err);
-    scoreText.textContent = `${textoBase} La práctica se calificó, pero no se pudo guardar en el historial. Revisa tu conexión e inténtalo nuevamente.`;
-  }
 }
 
 newBtn.addEventListener("click", generarPractica);
