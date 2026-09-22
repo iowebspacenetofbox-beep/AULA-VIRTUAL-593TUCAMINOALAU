@@ -33,7 +33,6 @@ let temaActualInfo = null;
 let quizActivo = null;
 let temaEditandoId = null;
 let editorSavedRange = null;
-let simuladoresGuardadosCache = {};
 
 // ==========================================
 // ORDEN AMIGABLE DE MATERIAS, MÓDULOS Y TEMAS
@@ -204,6 +203,45 @@ function actualizarRuta(mat, mod, tem) {
     document.getElementById('top-title').innerHTML = ruta || "Inicio";
 }
 
+
+// ==========================================
+// PROFE IA — INTEGRACIÓN SEGURA CON APP EXTERNA
+// ==========================================
+function obtenerContextoProfeIA() {
+    const vistaActual = [...document.querySelectorAll('#main-content > section')]
+        .find(sec => !sec.classList.contains('hidden'))?.id || 'view-inicio';
+
+    return {
+        vista: vistaActual,
+        ruta: document.getElementById('top-title')?.innerText?.trim() || 'Inicio',
+        materia: materiaSeleccionada?.nombre || '',
+        modulo: moduloSeleccionado?.nombre || '',
+        tema: temaActualInfo?.titulo || '',
+        recurso: document.getElementById('subtitulo-recursos')?.innerText?.trim() || ''
+    };
+}
+
+function enviarContextoProfeIA() {
+    const frame = document.getElementById('ai-teacher-frame');
+    if(!frame?.contentWindow) return;
+    // Solo se envían datos académicos de navegación; no se envían credenciales ni tokens.
+    frame.contentWindow.postMessage({
+        type: 'PROFE_IA_CONTEXT',
+        context: obtenerContextoProfeIA()
+    }, '*');
+}
+
+window.toggleProfeIA = function(abrir) {
+    const panel = document.getElementById('ai-teacher-panel');
+    if(!panel) return;
+    const debeAbrir = typeof abrir === 'boolean' ? abrir : !panel.classList.contains('open');
+    panel.classList.toggle('open', debeAbrir);
+    if(debeAbrir) {
+        // Espera un instante por si el iframe acaba de cargar y luego entrega el contexto.
+        setTimeout(enviarContextoProfeIA, 80);
+    }
+};
+
 // ==========================================
 // NAVEGACIÓN Y CONTROL DE INTERFAZ
 // ==========================================
@@ -229,6 +267,12 @@ window.mostrarVista = function(idVista) {
         btnRegresar.classList.toggle('hidden', idVista === 'view-inicio' || idVista === 'view-login');
     }
 
+    // El Profe IA está disponible en todos los niveles del aula, excepto en el login.
+    const aiLauncher = document.getElementById('ai-teacher-launcher');
+    if(aiLauncher) aiLauncher.classList.toggle('hidden', idVista === 'view-login');
+    if(idVista === 'view-login') document.getElementById('ai-teacher-panel')?.classList.remove('open');
+    else setTimeout(enviarContextoProfeIA, 60);
+
     const main = document.getElementById('main-content');
     if(main && idVista !== 'view-tema') main.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -246,8 +290,8 @@ window.regresarAtrasGlobal = function() {
 
     if(vistaActual === 'view-tema') {
         // Si está dentro de Textos, Videos, Imágenes o Evaluación, primero vuelve al menú del tema.
-        const btnVolverRecursos = document.getElementById('btn-volver-recursos');
-        if(btnVolverRecursos && !btnVolverRecursos.classList.contains('hidden')) {
+        const menuRecursos = document.getElementById('menu-recursos');
+        if(menuRecursos && menuRecursos.classList.contains('hidden')) {
             return window.volverRecursos();
         }
 
@@ -292,17 +336,28 @@ window.mostrarRecurso = function(id, nombreRecurso) {
     document.getElementById('menu-recursos').classList.add('hidden');
     document.querySelectorAll('.recurso-content').forEach(el => el.classList.add('hidden'));
     document.getElementById(id).classList.remove('hidden');
-    document.getElementById('btn-volver-modulo').classList.add('hidden');
-    document.getElementById('btn-volver-recursos').classList.remove('hidden');
-    document.getElementById('subtitulo-recursos').textContent = nombreRecurso;
+
+    const subtitulo = document.getElementById('subtitulo-recursos');
+    if(subtitulo) {
+        // En "Resumen y Textos" evitamos repetir el nombre debajo del título del tema.
+        if(id === 'acc-textos') {
+            subtitulo.classList.add('hidden');
+        } else {
+            subtitulo.textContent = nombreRecurso;
+            subtitulo.classList.remove('hidden');
+        }
+    }
 }
 
 window.volverRecursos = function() {
     document.getElementById('menu-recursos').classList.remove('hidden');
     document.querySelectorAll('.recurso-content').forEach(el => el.classList.add('hidden'));
-    document.getElementById('btn-volver-recursos').classList.add('hidden');
-    document.getElementById('btn-volver-modulo').classList.remove('hidden');
-    document.getElementById('subtitulo-recursos').textContent = "Recursos de aprendizaje";
+
+    const subtitulo = document.getElementById('subtitulo-recursos');
+    if(subtitulo) {
+        subtitulo.textContent = "Recursos de aprendizaje";
+        subtitulo.classList.remove('hidden');
+    }
 }
 
 window.switchAdminTab = function(tabName) {
@@ -456,12 +511,13 @@ window.editorInsertarFormula = function() {
 };
 
 window.editorInsertarConcepto = function() {
-    const etiqueta = prompt('Texto del botón o concepto (ej.: ¿Qué es electronegatividad?):');
+    const etiqueta = prompt('Escribe la palabra o frase que funcionará como concepto emergente:');
     if(!etiqueta) return;
     const contenido = prompt('Escribe la explicación que aparecerá en la ventana emergente:');
     if(!contenido) return;
     const codificado = encodeURIComponent(contenido.trim());
-    insertHTMLAtEditor(`<button type="button" class="concept-link" data-concept="${escapeAttr(codificado)}"><i class="fas fa-circle-info"></i>${escapeHTML(etiqueta.trim())}</button>&nbsp;`);
+    // Se inserta como texto normal azul y clicable, no como botón.
+    insertHTMLAtEditor(`<span class="concept-link" data-concept="${escapeAttr(codificado)}">${escapeHTML(etiqueta.trim())}</span>&nbsp;`);
 };
 
 window.editorInsertarTabla = function() {
@@ -572,6 +628,7 @@ window.cancelarEdicionTema = function() {
 document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-global-back')?.addEventListener('click', window.regresarAtrasGlobal);
+    document.getElementById('ai-teacher-frame')?.addEventListener('load', () => setTimeout(enviarContextoProfeIA, 60));
 
     // Inicialización del editor visual y acciones enriquecidas.
     const editor = getRichEditor();
@@ -610,9 +667,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cargarDatosAdmin();
     });
 
-    document.getElementById('btn-volver-modulo')?.addEventListener('click', () => {
-        if(moduloSeleccionado) window.cargarModulo(moduloSeleccionado.id, moduloSeleccionado.nombre, moduloSeleccionado.materiaId, moduloSeleccionado.materiaNombre, moduloSeleccionado.evaluacion);
-    });
 
     // Login
     document.getElementById('btn-login-email')?.addEventListener('click', async () => {
@@ -632,17 +686,60 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.getElementById('btn-descargar-pdf')?.addEventListener('click', () => {
+    document.getElementById('btn-descargar-pdf')?.addEventListener('click', async () => {
         const elemento = document.getElementById('tema-resumen');
+        if(!elemento) return;
+
         const nombreArchivo = (temaActualInfo?.titulo || 'Resumen').replace(/\s+/g, '_') + '.pdf';
+
+        // IMPORTANTE: aquí NO se vuelve a ejecutar MathJax.typesetPromise().
+        // La fórmula ya fue renderizada al abrir el tema. Volver a tipografiar el mismo
+        // nodo justo antes del PDF puede dejar varias capas de MathJax superpuestas.
+        // Esperamos únicamente dos frames para asegurar que el render visible esté estable.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+        const esCapaAsistivaMathJax = (node) => {
+            if(!node || node.nodeType !== 1) return false;
+            const tag = (node.tagName || '').toLowerCase();
+            return tag === 'mjx-assistive-mml' ||
+                   node.classList?.contains('MJX_Assistive_MathML') ||
+                   node.getAttribute?.('aria-hidden') === 'true' && tag === 'math';
+        };
+
         const opt = {
             margin:       0.5,
             filename:     nombreArchivo,
             image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
+            html2canvas:  {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#FFFFFF',
+
+                // Evita que html2canvas capture la copia MathML invisible que MathJax
+                // mantiene para accesibilidad. La fórmula visual (mjx-container) se conserva.
+                ignoreElements: (node) => esCapaAsistivaMathJax(node),
+
+                // Refuerzo sobre la copia temporal usada por html2canvas. No modifica
+                // la vista del estudiante ni el contenido original de la página.
+                onclone: (clonedDocument) => {
+                    const resumenPDF = clonedDocument.getElementById('tema-resumen');
+                    if(!resumenPDF) return;
+
+                    resumenPDF.querySelectorAll(
+                        'mjx-assistive-mml, .MJX_Assistive_MathML'
+                    ).forEach(el => el.remove());
+
+                    // Conserva una sola salida visual de MathJax y evita que elementos
+                    // de accesibilidad ocultos reaparezcan durante la captura.
+                    resumenPDF.querySelectorAll('mjx-container').forEach(container => {
+                        container.querySelectorAll('[aria-hidden="true"] math').forEach(el => el.remove());
+                    });
+                }
+            },
             jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
         };
-        html2pdf().set(opt).from(elemento).save();
+
+        await html2pdf().set(opt).from(elemento).save();
     });
 
     // ==========================================
@@ -790,7 +887,6 @@ document.addEventListener('DOMContentLoaded', () => {
         resDiv.innerHTML = `<h3>Puntaje Obtenido</h3><p style="font-size: 36px; font-weight: 800; color: var(--primary-light); margin:0;">${puntaje} / ${quizActivo.length}</p>`;
         resDiv.classList.remove('hidden');
         document.getElementById('btn-enviar-quiz').classList.add('hidden');
-        document.getElementById('btn-volver-tema-desde-quiz').classList.remove('hidden');
 
         await setDoc(doc(db, "usuarios", usuarioActual.uid, "progreso_temas", temaActualInfo.id), {
             status: "green", timestamp: new Date().toISOString()
@@ -812,7 +908,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(() => {});
     });
 
-    document.getElementById('btn-volver-tema-desde-quiz')?.addEventListener('click', () => mostrarVista('view-tema'));
 });
 
 // ==========================================
@@ -1101,7 +1196,7 @@ window.abrirTema = async function(temaId, matId, matNombre, modNombre) {
         temaActualInfo = { id: temaId, ...data };
 
         // Si el tema se abrió directamente desde el árbol lateral, reconstruye el módulo actual
-        // para que el botón "Volver a módulos" siga funcionando correctamente.
+        // para que el botón global de regreso mantenga correctamente el flujo hacia el módulo.
         if(data.modulo_id && (!moduloSeleccionado || moduloSeleccionado.id !== data.modulo_id)) {
             const modSnap = await getDoc(doc(db, "modulos", data.modulo_id));
             const modData = modSnap.exists() ? modSnap.data() : {};
@@ -1130,8 +1225,14 @@ window.abrirTema = async function(temaId, matId, matNombre, modNombre) {
         const resBox = document.getElementById('tema-resumen');
         if (resBox) {
             resBox.innerHTML = typeof marked !== 'undefined' ? marked.parse(data.resumen_teorico || "") : data.resumen_teorico;
-            if(window.MathJax) {
-                MathJax.typesetPromise([resBox]).catch((err) => console.log('Error renderizando LaTeX:', err));
+            if(window.MathJax?.typesetPromise) {
+                // Renderiza las fórmulas UNA sola vez al cargar el tema y espera a que
+                // terminen antes de mostrar la vista. Así el PDF solo captura la salida final.
+                try {
+                    await MathJax.typesetPromise([resBox]);
+                } catch(err) {
+                    console.log('Error renderizando LaTeX:', err);
+                }
             }
         }
 
@@ -1192,193 +1293,37 @@ window.abrirTema = async function(temaId, matId, matNombre, modNombre) {
 
 async function cargarSimuladoresGuardados() {
     const cont = document.getElementById('lista-simuladores-guardados');
-    if(!cont || !usuarioActual?.uid || !temaActualInfo?.id) return;
+    cont.innerHTML = "<p>Cargando historial...</p>";
+    const snap = await getDocs(query(collection(db, "usuarios", usuarioActual.uid, "simuladores_guardados"), where("tema_id", "==", temaActualInfo.id)));
+    
+    if(snap.empty) { cont.innerHTML = "<p style='font-size:13px; color:var(--text-light);'>No has realizado ninguna evaluación previa guardada.</p>"; return; }
 
-    cont.innerHTML = "<p style='font-size:13px; color:var(--text-light);'>Cargando historial...</p>";
-
-    try {
-        const snap = await getDocs(query(
-            collection(db, "usuarios", usuarioActual.uid, "simuladores_guardados"),
-            where("tema_id", "==", temaActualInfo.id)
-        ));
-
-        simuladoresGuardadosCache = {};
-
-        if(snap.empty) {
-            cont.innerHTML = "<p style='font-size:13px; color:var(--text-light);'>Todavía no has completado ninguna práctica de este tema.</p>";
-            return;
-        }
-
-        const intentos = snap.docs
-            .map(d => ({ id: d.id, ...d.data() }))
-            .sort((a, b) => String(b.fecha || b.timestamp || '').localeCompare(String(a.fecha || a.timestamp || '')));
-
-        let html = "";
-
-        intentos.forEach((data, index) => {
-            simuladoresGuardadosCache[data.id] = data;
-
-            const puntaje = Number.isFinite(Number(data.puntaje)) ? Number(data.puntaje) : null;
-            const total = Number.isFinite(Number(data.total)) ? Number(data.total) :
-                (Array.isArray(data.preguntas) ? data.preguntas.length : null);
-
-            let fechaTexto = "";
-            if(data.fecha || data.timestamp) {
-                const fecha = new Date(data.fecha || data.timestamp);
-                if(!Number.isNaN(fecha.getTime())) {
-                    fechaTexto = fecha.toLocaleString('es-EC', {
-                        day:'2-digit', month:'2-digit', year:'numeric',
-                        hour:'2-digit', minute:'2-digit'
-                    });
-                }
-            }
-
-            const dificultad = data.dificultad
-                ? String(data.dificultad).charAt(0).toUpperCase() + String(data.dificultad).slice(1)
-                : "";
-
-            const resultado = puntaje !== null && total
-                ? `<strong style="color:var(--primary-light);">${puntaje}/${total}</strong>`
-                : `<strong>Revisión</strong>`;
-
-            const detalle = [fechaTexto, dificultad].filter(Boolean).join(" · ");
-
-            html += `
-                <button class="btn-outline" style="justify-content:space-between; text-align:left; padding:12px 14px; gap:12px;"
-                        onclick="revisarSimuladorGuardado('${data.id}')">
-                    <span style="display:flex; align-items:center; gap:9px;">
-                        <i class="fas fa-lock" style="color:#64748B;"></i>
-                        <span>
-                            <strong>Práctica realizada ${intentos.length > 1 ? `#${intentos.length - index}` : ''}</strong>
-                            ${detalle ? `<small style="display:block; color:var(--text-light); margin-top:2px;">${escapeHTML(detalle)}</small>` : ''}
-                        </span>
-                    </span>
-                    <span>${resultado}</span>
-                </button>`;
-        });
-
-        cont.innerHTML = html;
-    } catch(err) {
-        console.error("Error cargando prácticas guardadas:", err);
-        cont.innerHTML = "<p style='font-size:13px; color:var(--danger);'>No se pudo cargar tu historial de prácticas.</p>";
-    }
+    let html = ""; let i = 1;
+    snap.forEach(d => {
+        const p = JSON.stringify(d.data().preguntas).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+        html += `<button class="btn-outline" style="justify-content: flex-start; text-align: left; padding: 12px;" onclick="iniciarQuiz(${p})"><i class="fas fa-file-signature"></i> Evaluación Pasada #${i++}</button>`;
+    });
+    cont.innerHTML = html;
 }
 
-window.revisarSimuladorGuardado = function(intentoId) {
-    const intento = simuladoresGuardadosCache[intentoId];
-    if(!intento) return alert("No se pudo abrir esta práctica. Vuelve a entrar al tema e inténtalo nuevamente.");
-
-    const preguntas = Array.isArray(intento.preguntas) ? intento.preguntas : [];
-    const respuestas = Array.isArray(intento.respuestas) ? intento.respuestas : [];
-
-    if(!preguntas.length) return alert("Esta práctica guardada no contiene preguntas para revisar.");
-
+window.iniciarQuiz = function(preguntas) {
     quizActivo = preguntas;
-
-    const puntaje = Number.isFinite(Number(intento.puntaje)) ? Number(intento.puntaje) : 0;
-    const total = Number.isFinite(Number(intento.total)) ? Number(intento.total) : preguntas.length;
-
-    let fechaTexto = "";
-    if(intento.fecha || intento.timestamp) {
-        const fecha = new Date(intento.fecha || intento.timestamp);
-        if(!Number.isNaN(fecha.getTime())) fechaTexto = fecha.toLocaleString('es-EC');
-    }
-
-    document.getElementById('quiz-titulo').textContent = temaActualInfo?.titulo || intento.tema_titulo || "Práctica";
-    document.getElementById('quiz-subtitulo').textContent =
-        `Revisión bloqueada · Resultado ${puntaje}/${total}${fechaTexto ? ` · ${fechaTexto}` : ''}`;
-
-    document.getElementById('btn-enviar-quiz')?.classList.add('hidden');
-    document.getElementById('btn-volver-tema-desde-quiz')?.classList.remove('hidden');
+    document.getElementById('quiz-titulo').textContent = temaActualInfo.titulo;
+    document.getElementById('quiz-subtitulo').textContent = "Revisión de respuestas guardadas:";
+    document.getElementById('btn-enviar-quiz').classList.remove('hidden');
+    document.getElementById('quiz-resultado').classList.add('hidden');
 
     const cont = document.getElementById('quiz-preguntas-container');
+    cont.innerHTML = quizActivo.map((p, idx) => `
+        <div class="instruction-card" style="margin-bottom: 15px;">
+            <p style="font-weight:700;">${idx + 1}. ${p.enunciado}</p>
+            ${p.opciones.map((op, opIdx) => `<label class="quiz-option"><input type="radio" name="q${idx}" value="${opIdx}"><span>${op}</span></label>`).join('')}
+            <div id="exp-q${idx}" class="hidden" style="margin-top: 10px; background: #F0FDF4; padding: 10px; border-radius: 6px; font-size: 13px; color: #166534;"><strong>Explicación:</strong> ${p.explicacion}</div>
+        </div>`).join('');
 
-    cont.innerHTML = preguntas.map((p, idx) => {
-        const respuesta = Number.isInteger(Number(respuestas[idx])) ? Number(respuestas[idx]) : null;
-        const correcta = Number(p.respuesta_correcta);
-
-        const opciones = (Array.isArray(p.opciones) ? p.opciones : []).map((op, opIdx) => {
-            const esCorrecta = opIdx === correcta;
-            const fueElegida = respuesta === opIdx;
-
-            let estilo = "cursor:default;";
-            let etiqueta = "";
-
-            if(esCorrecta) {
-                estilo += "background:#ECFDF5;border-color:#6EE7B7;";
-                etiqueta = `<strong style="margin-left:8px;color:#047857;">✓ Correcta</strong>`;
-            } else if(fueElegida) {
-                estilo += "background:#FEF2F2;border-color:#FCA5A5;";
-                etiqueta = `<strong style="margin-left:8px;color:#B91C1C;">Tu respuesta</strong>`;
-            }
-
-            return `
-                <label class="quiz-option" style="${estilo}">
-                    <input type="radio" name="review-q${idx}" value="${opIdx}" disabled ${fueElegida ? 'checked' : ''}>
-                    <span>${escapeHTML(op)}${etiqueta}</span>
-                </label>`;
-        }).join('');
-
-        const sinRespuesta = respuesta === null
-            ? `<p style="margin:10px 0 0; color:#B45309; font-size:13px;"><strong>Sin respuesta registrada.</strong></p>`
-            : '';
-
-        return `
-            <div class="instruction-card" style="margin-bottom:15px;">
-                <p style="font-weight:700;">${idx + 1}. ${escapeHTML(p.enunciado || '')}</p>
-                ${opciones}
-                ${sinRespuesta}
-                <div style="margin-top:12px; background:#EFF6FF; padding:12px; border-radius:8px; font-size:13px; color:#1E3A8A; line-height:1.55;">
-                    <strong>Explicación de la IA:</strong> ${escapeHTML(p.explicacion || 'No hay explicación guardada para esta pregunta.')}
-                </div>
-            </div>`;
-    }).join('');
-
-    const resDiv = document.getElementById('quiz-resultado');
-    if(resDiv) {
-        resDiv.innerHTML = `
-            <h3 style="margin-bottom:6px;">Resultado guardado</h3>
-            <p style="font-size:36px; font-weight:800; color:var(--primary-light); margin:0;">${puntaje} / ${total}</p>
-            <p style="color:var(--text-light); margin:8px 0 0;">Esta práctica está bloqueada y disponible únicamente para revisión.</p>`;
-        resDiv.classList.remove('hidden');
-    }
-
-    if(window.MathJax?.typesetPromise) {
-        MathJax.typesetPromise([cont]).catch(err => console.log('Error renderizando LaTeX:', err));
-    }
-
+    if(window.MathJax) MathJax.typesetPromise();
     mostrarVista('view-quiz');
-};
-
-// Compatibilidad con cualquier historial antiguo que solo haya guardado las preguntas.
-window.iniciarQuiz = function(preguntas) {
-    const legacyId = `legacy-${Date.now()}`;
-    simuladoresGuardadosCache[legacyId] = {
-        preguntas: Array.isArray(preguntas) ? preguntas : [],
-        respuestas: [],
-        puntaje: 0,
-        total: Array.isArray(preguntas) ? preguntas.length : 0,
-        tema_titulo: temaActualInfo?.titulo || "Práctica"
-    };
-    window.revisarSimuladorGuardado(legacyId);
-};
-
-// Refresca el historial al volver desde la pestaña del simulador.
-window.addEventListener('storage', (event) => {
-    if(event.key !== 'simuladorGuardado' || !event.newValue) return;
-    try {
-        const info = JSON.parse(event.newValue);
-        if(info.uid === usuarioActual?.uid && info.temaId === temaActualInfo?.id) {
-            cargarSimuladoresGuardados();
-        }
-    } catch(_) {}
-});
-
-document.addEventListener('visibilitychange', () => {
-    if(!document.hidden && usuarioActual?.uid && temaActualInfo?.id) {
-        cargarSimuladoresGuardados();
-    }
-});
+}
 
 // ==========================================
 // FUNCIONES ADMIN (CARGAR Y ELIMINAR)
