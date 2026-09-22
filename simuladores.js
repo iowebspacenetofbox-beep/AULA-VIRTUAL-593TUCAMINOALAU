@@ -133,7 +133,7 @@ async function generarPractica() {
   newBtn.disabled = true;
   resultBox.classList.add("hidden");
   quizBox.innerHTML = "";
-  setStatus("Generando una práctica nueva con Gemini", "");
+  setStatus("Generando preguntas con Elix AI...", "");
 
   try {
     const cantidad = Number(document.getElementById("count").value);
