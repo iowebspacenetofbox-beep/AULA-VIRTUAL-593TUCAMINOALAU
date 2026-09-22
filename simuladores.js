@@ -135,6 +135,13 @@ async function generarPractica() {
   quizBox.innerHTML = "";
   setStatus("Generando preguntas con Elix AI...", "");
 
+  const waitingMessageTimer = setTimeout(() => {
+    setStatus(
+      "Elix AI está preparando las preguntas. Si el servicio está ocupado, reintentaremos automáticamente...",
+      ""
+    );
+  }, 5000);
+
   try {
     const cantidad = Number(document.getElementById("count").value);
     const dificultad = document.getElementById("difficulty").value;
@@ -165,6 +172,7 @@ async function generarPractica() {
     console.error(err);
     setStatus(err.message || "No se pudo generar la práctica.", "error");
   } finally {
+    clearTimeout(waitingMessageTimer);
     generateBtn.disabled = false;
   }
 }
@@ -232,7 +240,7 @@ async function calificar() {
   scoreText.textContent =
     porcentaje >= 80 ? `Muy buen trabajo: ${porcentaje}% de aciertos.` :
     porcentaje >= 60 ? `Vas avanzando: ${porcentaje}% de aciertos. Revisa las explicaciones.` :
-    `Obtuviste ${porcentaje}% de aciertos. Revisa las explicaciones y genera otra práctica.`;
+    `Obtuviste ${porcentaje}% de aciertos. Revisa las explicaciones, consulta dudas con Profe IA y genera otra práctica.`;
 
   resultBox.classList.remove("hidden");
   document.getElementById("grade-btn").disabled = true;
