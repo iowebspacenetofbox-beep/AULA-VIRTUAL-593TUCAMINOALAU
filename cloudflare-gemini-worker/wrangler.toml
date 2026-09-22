@@ -1,0 +1,13 @@
+name = "simulador-ia-593"
+main = "src/index.js"
+compatibility_date = "2026-09-22"
+keep_vars = true
+
+# IMPORTANTE:
+# NO pongas GEMINI_API_KEY aquí.
+# En Cloudflare > Worker > Settings > Variables and Secrets crea:
+#
+# GEMINI_API_KEY   -> Secret
+# GEMINI_MODEL     -> Variable normal con el ID exacto de un modelo Gemini activo en tu cuenta
+# ALLOWED_ORIGINS  -> Variable normal:
+# https://aula-virtual-593tucaminoalau.io-web-space-neto-f-box.workers.dev

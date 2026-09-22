@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ejercicios para prácticas - 593 TucaminoalaU</title>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    :root {
+      --primary:#0B1220;
+      --blue:#2563EB;
+      --blue-soft:#EFF6FF;
+      --green:#10B981;
+      --green-soft:#ECFDF5;
+      --red:#EF4444;
+      --red-soft:#FEF2F2;
+      --amber:#F59E0B;
+      --bg:#F4F7FB;
+      --text:#172033;
+      --muted:#64748B;
+      --border:#E2E8F0;
+      --card:#FFFFFF;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin:0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(37,99,235,.08), transparent 26rem),
+        radial-gradient(circle at 92% 92%, rgba(124,58,237,.07), transparent 28rem),
+        var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+
+    .topbar {
+      position:sticky;
+      top:0;
+      z-index:10;
+      background:rgba(255,255,255,.94);
+      backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);
+      padding:14px 20px;
+    }
+
+    .topbar-inner, .page { max-width:1000px; margin:0 auto; }
+    .topbar-inner { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .brand { font-weight:900; color:var(--primary); }
+    .brand span { color:var(--blue); }
+
+    .page { padding:28px 18px 60px; }
+
+    .hero, .card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:20px;
+      box-shadow:0 12px 35px rgba(15,23,42,.08);
+    }
+
+    .hero { padding:26px; margin-bottom:18px; }
+    .hero h1 { margin:0 0 8px; font-size:clamp(24px, 4vw, 36px); }
+    .hero p { margin:0; color:var(--muted); line-height:1.55; }
+
+    .topic-pill {
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      background:var(--blue-soft);
+      color:#1E3A8A;
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:13px;
+      font-weight:800;
+      margin-bottom:12px;
+    }
+
+    .controls {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
+      padding:20px;
+      margin-bottom:18px;
+    }
+
+    label { display:block; font-size:13px; color:var(--muted); font-weight:800; margin-bottom:6px; }
+    select {
+      width:100%;
+      padding:12px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:white;
+      font:inherit;
+      color:var(--text);
+    }
+
+    .actions { grid-column:1/-1; display:flex; gap:10px; flex-wrap:wrap; }
+    button, .link-btn {
+      appearance:none;
+      border:0;
+      border-radius:12px;
+      padding:12px 16px;
+      font:inherit;
+      font-weight:850;
+      cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+
+    .primary { background:var(--blue); color:white; }
+    .secondary { background:white; color:var(--blue); border:1px solid #BFDBFE; }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+
+    .status {
+      padding:16px 18px;
+      border-radius:14px;
+      margin:0 0 18px;
+      background:#FFFBEB;
+      border:1px solid #FDE68A;
+      color:#92400E;
+      font-weight:700;
+    }
+    .status.error { background:var(--red-soft); border-color:#FECACA; color:#991B1B; }
+    .hidden { display:none !important; }
+
+    .question {
+      padding:22px;
+      margin-bottom:16px;
+    }
+
+    .question h3 {
+      margin:0 0 16px;
+      font-size:18px;
+      line-height:1.5;
+    }
+
+    .option {
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:12px 14px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      margin:9px 0;
+      cursor:pointer;
+      background:white;
+      line-height:1.45;
+    }
+
+    .option:hover { border-color:#93C5FD; background:#F8FBFF; }
+    .option.correct { border-color:#6EE7B7; background:var(--green-soft); }
+    .option.wrong { border-color:#FCA5A5; background:var(--red-soft); }
+
+    .explanation {
+      margin-top:14px;
+      padding:13px 14px;
+      background:#F8FAFC;
+      border-left:4px solid var(--blue);
+      border-radius:10px;
+      line-height:1.55;
+    }
+
+    .result {
+      padding:24px;
+      margin-top:18px;
+      text-align:center;
+    }
+
+    .score {
+      font-size:42px;
+      font-weight:950;
+      color:var(--blue);
+      margin:6px 0;
+    }
+
+    .loading-dot::after {
+      content:"";
+      display:inline-block;
+      width:10px;
+      animation:dots 1.2s steps(4,end) infinite;
+    }
+    @keyframes dots {
+      0% { content:""; }
+      25% { content:"."; }
+      50% { content:".."; }
+      75%,100% { content:"..."; }
+    }
+
+    mjx-container[display="true"] { overflow-x:auto; overflow-y:hidden; padding:4px 0; }
+
+    @media (max-width:680px) {
+      .controls { grid-template-columns:1fr; }
+      .actions { grid-column:1; }
+      .topbar-inner { align-items:flex-start; flex-direction:column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">593 <span>TucaminoalaU</span></div>
+      <a class="link-btn secondary" href="./index.html">← Volver al aula</a>
+    </div>
+  </div>
+
+  <main class="page">
+    <section class="hero">
+      <div class="topic-pill">✨ Práctica generada con IA</div>
+      <h1>Ejercicios para prácticas</h1>
+      <p id="topic-info">Cargando el tema...</p>
+    </section>
+
+    <section class="card controls">
+      <div>
+        <label for="difficulty">Dificultad</label>
+        <select id="difficulty">
+          <option value="media" selected>Media</option>
+          <option value="facil">Fácil</option>
+          <option value="dificil">Difícil</option>
+          <option value="ingreso">Nivel examen de ingreso</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="count">Número de preguntas</label>
+        <select id="count">
+          <option value="5">5 preguntas</option>
+          <option value="10" selected>10 preguntas</option>
+          <option value="15">15 preguntas</option>
+        </select>
+      </div>
+
+      <div class="actions">
+        <button id="generate-btn" class="primary">Generar práctica</button>
+        <button id="new-btn" class="secondary hidden">Generar otra práctica</button>
+      </div>
+    </section>
+
+    <div id="status" class="status">Espera un momento mientras verificamos tu sesión.</div>
+
+    <section id="quiz"></section>
+
+    <section id="result" class="card result hidden">
+      <div>Resultado</div>
+      <div id="score" class="score">0 / 0</div>
+      <div id="score-text"></div>
+    </section>
+  </main>
+
+  <script src="./simuladores-config.js?v=20260922-1"></script>
+  <script type="module" src="./simuladores.js?v=20260922-1"></script>
+</body>
+</html>
