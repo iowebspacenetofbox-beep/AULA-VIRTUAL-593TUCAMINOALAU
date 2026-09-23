@@ -693,16 +693,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!elemento) return;
 
         const textoBoton = boton?.innerHTML || '';
-        let printContainer = null;
-        let printStyle = null;
+        let iframeImpresion = null;
 
         try {
             if(boton) {
                 boton.disabled = true;
-                boton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Preparando impresión...`;
+                boton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Preparando PDF...`;
             }
 
-            // Espera a que fuentes, imágenes y MathJax terminen de renderizar.
+            // Espera a que la vista actual esté completamente estable.
             if(document.fonts?.ready) {
                 try { await document.fonts.ready; } catch(_) {}
             }
@@ -725,142 +724,201 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-            // Crea una copia dedicada exclusivamente a impresión.
-            // No modifica ni mueve el contenido visible del aula.
-            const clon = elemento.cloneNode(true);
-            clon.id = "print-only-resumen";
+            // Prepara SOLO el contenido del resumen en un documento de impresión independiente.
+            // Esto evita que la estructura completa del aula afecte los saltos de página.
+            const contenido = elemento.cloneNode(true);
+            contenido.id = "print-root";
 
-            // MathJax incluye una capa invisible de accesibilidad.
-            // Se elimina solo en la copia de impresión para evitar duplicados.
-            clon.querySelectorAll(
+            // MathJax mantiene una copia invisible para accesibilidad.
+            // La quitamos únicamente de la copia de impresión para evitar duplicados.
+            contenido.querySelectorAll(
                 'mjx-assistive-mml, .MJX_Assistive_MathML'
             ).forEach(el => el.remove());
+            contenido.querySelectorAll('mjx-container [aria-hidden="true"] math').forEach(el => el.remove());
 
-            clon.querySelectorAll('mjx-container [aria-hidden="true"] math').forEach(el => el.remove());
+            // Copia únicamente hojas de estilo y bloques CSS; nunca scripts.
+            const estilosPagina = [...document.head.querySelectorAll('style, link[rel="stylesheet"]')]
+                .map(nodo => nodo.outerHTML)
+                .join('\n');
 
-            printContainer = document.createElement('div');
-            printContainer.id = 'print-only-container';
-            printContainer.setAttribute('aria-hidden', 'true');
-            printContainer.appendChild(clon);
-            document.body.appendChild(printContainer);
+            iframeImpresion = document.createElement('iframe');
+            iframeImpresion.setAttribute('aria-hidden', 'true');
+            iframeImpresion.tabIndex = -1;
+            iframeImpresion.style.position = 'fixed';
+            iframeImpresion.style.right = '0';
+            iframeImpresion.style.bottom = '0';
+            iframeImpresion.style.width = '1px';
+            iframeImpresion.style.height = '1px';
+            iframeImpresion.style.border = '0';
+            iframeImpresion.style.opacity = '0';
+            iframeImpresion.style.pointerEvents = 'none';
+            document.body.appendChild(iframeImpresion);
 
-            printStyle = document.createElement('style');
-            printStyle.id = 'print-only-style';
-            printStyle.textContent = `
-                #print-only-container {
-                    display: none;
-                }
+            const docPrint = iframeImpresion.contentDocument;
+            docPrint.open();
+            docPrint.write(`<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+${estilosPagina}
+<style>
+    @page {
+        size: letter portrait;
+        margin: 13mm 15mm 14mm 15mm;
+    }
 
-                @media print {
-                    @page {
-                        size: letter portrait;
-                        margin: 15mm 16mm 15mm 16mm;
-                    }
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        background: #ffffff !important;
+        overflow: visible !important;
+    }
 
-                    html, body {
-                        background: #fff !important;
-                        width: auto !important;
-                        height: auto !important;
-                        overflow: visible !important;
-                    }
+    body {
+        color: #111827 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 
-                    body > * {
-                        display: none !important;
-                    }
+    #print-root {
+        display: block !important;
+        position: static !important;
+        float: none !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+        border: 0 !important;
+        transform: none !important;
+    }
 
-                    #print-only-container {
-                        display: block !important;
-                        position: static !important;
-                        width: 100% !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: #fff !important;
-                        color: #111827 !important;
-                    }
+    /* Elimina saltos heredados del editor que pueden crear páginas casi vacías. */
+    #print-root * {
+        animation: none !important;
+        transition: none !important;
+        break-before: auto !important;
+        break-after: auto !important;
+        page-break-before: auto !important;
+        page-break-after: auto !important;
+    }
 
-                    #print-only-resumen {
-                        display: block !important;
-                        width: 100% !important;
-                        max-width: none !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: #fff !important;
-                        color: #111827 !important;
-                        box-shadow: none !important;
-                        border: 0 !important;
-                        overflow: visible !important;
-                    }
+    /* Los bloques de texto pueden continuar naturalmente en la página siguiente. */
+    #print-root p,
+    #print-root div,
+    #print-root section,
+    #print-root article,
+    #print-root blockquote,
+    #print-root ul,
+    #print-root ol,
+    #print-root li {
+        min-height: 0 !important;
+        max-height: none !important;
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+    }
 
-                    #print-only-resumen *,
-                    #print-only-resumen *::before,
-                    #print-only-resumen *::after {
-                        animation: none !important;
-                        transition: none !important;
-                    }
+    #print-root p,
+    #print-root li,
+    #print-root blockquote {
+        orphans: 2;
+        widows: 2;
+    }
 
-                    #print-only-resumen p,
-                    #print-only-resumen li,
-                    #print-only-resumen blockquote {
-                        orphans: 3;
-                        widows: 3;
-                    }
+    /* Mantiene cada título junto con el inicio del texto que le sigue. */
+    #print-root h1,
+    #print-root h2,
+    #print-root h3,
+    #print-root h4,
+    #print-root h5,
+    #print-root h6 {
+        min-height: 0 !important;
+        break-after: avoid-page !important;
+        page-break-after: avoid !important;
+    }
 
-                    #print-only-resumen h1,
-                    #print-only-resumen h2,
-                    #print-only-resumen h3,
-                    #print-only-resumen h4,
-                    #print-only-resumen h5,
-                    #print-only-resumen h6 {
-                        break-after: avoid-page;
-                        page-break-after: avoid;
-                    }
+    /* Solo los objetos que realmente conviene mantener enteros evitan cortes. */
+    #print-root img,
+    #print-root figure,
+    #print-root tr,
+    #print-root mjx-container[display="true"] {
+        break-inside: avoid-page !important;
+        page-break-inside: avoid !important;
+    }
 
-                    #print-only-resumen img,
-                    #print-only-resumen figure,
-                    #print-only-resumen table,
-                    #print-only-resumen tr,
-                    #print-only-resumen mjx-container {
-                        break-inside: avoid-page;
-                        page-break-inside: avoid;
-                    }
+    #print-root table {
+        width: 100% !important;
+        max-width: 100% !important;
+        table-layout: auto !important;
+        break-inside: auto !important;
+        page-break-inside: auto !important;
+    }
 
-                    #print-only-resumen img {
-                        max-width: 100% !important;
-                        height: auto !important;
-                    }
+    #print-root img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
 
-                    #print-only-resumen table {
-                        width: 100% !important;
-                        max-width: 100% !important;
-                    }
+    #print-root figure {
+        max-width: 100% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
 
-                    #print-only-resumen pre,
-                    #print-only-resumen code {
-                        white-space: pre-wrap !important;
-                        overflow-wrap: anywhere !important;
-                    }
+    #print-root mjx-container {
+        max-width: 100% !important;
+    }
 
-                    #print-only-resumen a {
-                        color: inherit !important;
-                        text-decoration: none !important;
-                    }
-                }
-            `;
-            document.head.appendChild(printStyle);
+    #print-root pre,
+    #print-root code {
+        white-space: pre-wrap !important;
+        overflow-wrap: anywhere !important;
+    }
 
-            // El navegador genera el PDF mediante su motor de impresión nativo.
-            // En el cuadro de impresión el usuario elige "Guardar como PDF".
-            await new Promise(resolve => setTimeout(resolve, 80));
-            window.print();
+    #print-root a {
+        color: inherit !important;
+        text-decoration: none !important;
+    }
+</style>
+</head>
+<body>
+${contenido.outerHTML}
+</body>
+</html>`);
+            docPrint.close();
+
+            // Espera fuentes e imágenes dentro del documento de impresión.
+            if(docPrint.fonts?.ready) {
+                try { await docPrint.fonts.ready; } catch(_) {}
+            }
+
+            const imgsPrint = [...docPrint.images];
+            await Promise.all(imgsPrint.map(img => new Promise(resolve => {
+                if(img.complete) return resolve();
+                img.addEventListener('load', resolve, { once:true });
+                img.addEventListener('error', resolve, { once:true });
+                setTimeout(resolve, 3000);
+            })));
+
+            await new Promise(resolve => setTimeout(resolve, 180));
+
+            const winPrint = iframeImpresion.contentWindow;
+            winPrint.focus();
+            winPrint.print();
         } catch(err) {
             console.error("Error preparando impresión del resumen:", err);
             alert("No se pudo preparar el PDF. Intenta nuevamente.");
         } finally {
-            // Se limpia la copia temporal una vez cerrado el diálogo de impresión.
-            setTimeout(() => {
-                printContainer?.remove();
-                printStyle?.remove();
-            }, 500);
+            // Da tiempo a que el navegador abra el diálogo antes de retirar el documento temporal.
+            setTimeout(() => iframeImpresion?.remove(), 1200);
 
             if(boton) {
                 boton.disabled = false;
