@@ -701,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 boton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Preparando PDF...`;
             }
 
-            // Espera a que la vista actual esté completamente estable.
+            // Espera a que fuentes, imágenes y MathJax estén listos antes de copiar el contenido.
             if(document.fonts?.ready) {
                 try { await document.fonts.ready; } catch(_) {}
             }
@@ -724,19 +724,83 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-            // Prepara SOLO el contenido del resumen en un documento de impresión independiente.
-            // Esto evita que la estructura completa del aula afecte los saltos de página.
+            // Trabajamos SIEMPRE sobre una copia. La vista del estudiante no se modifica.
             const contenido = elemento.cloneNode(true);
             contenido.id = "print-root";
 
-            // MathJax mantiene una copia invisible para accesibilidad.
-            // La quitamos únicamente de la copia de impresión para evitar duplicados.
+            // Elimina las capas invisibles de MathJax que pueden duplicar fórmulas al imprimir.
             contenido.querySelectorAll(
                 'mjx-assistive-mml, .MJX_Assistive_MathML'
             ).forEach(el => el.remove());
             contenido.querySelectorAll('mjx-container [aria-hidden="true"] math').forEach(el => el.remove());
 
-            // Copia únicamente hojas de estilo y bloques CSS; nunca scripts.
+            // Limpieza específica para contenido pegado/editado:
+            // Word, navegadores y editores suelen dejar alturas, márgenes y saltos enormes.
+            // Aquí se eliminan SOLO en la copia de impresión.
+            const bloquesNormalizables = contenido.querySelectorAll(
+                'p, div, section, article, header, footer, aside, blockquote, ul, ol, li, h1, h2, h3, h4, h5, h6, figure'
+            );
+
+            bloquesNormalizables.forEach(el => {
+                [
+                    'height', 'min-height', 'max-height',
+                    'margin-top', 'margin-bottom',
+                    'padding-top', 'padding-bottom',
+                    'break-before', 'break-after', 'break-inside',
+                    'page-break-before', 'page-break-after', 'page-break-inside'
+                ].forEach(prop => el.style.removeProperty(prop));
+
+                // Evita que posiciones heredadas saquen elementos de su flujo natural.
+                const pos = String(el.style.position || '').toLowerCase();
+                if(['absolute', 'fixed', 'sticky'].includes(pos)) {
+                    el.style.removeProperty('position');
+                    el.style.removeProperty('top');
+                    el.style.removeProperty('bottom');
+                    el.style.removeProperty('left');
+                    el.style.removeProperty('right');
+                }
+            });
+
+            // Quita párrafos/divs vacíos usados como "espaciadores".
+            // Conserva cualquier bloque que contenga una imagen, tabla, fórmula u otro contenido real.
+            [...contenido.querySelectorAll('p, div')].forEach(el => {
+                const tieneContenidoVisual = el.querySelector(
+                    'img, svg, table, figure, video, iframe, mjx-container, math, hr'
+                );
+                const texto = (el.textContent || '')
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\s+/g, '')
+                    .trim();
+
+                const soloSaltos = !texto &&
+                    !tieneContenidoVisual &&
+                    [...el.childNodes].every(n =>
+                        n.nodeType === Node.TEXT_NODE ||
+                        (n.nodeType === Node.ELEMENT_NODE && ['BR', 'SPAN'].includes(n.nodeName))
+                    );
+
+                if(soloSaltos) el.remove();
+            });
+
+            // Reduce secuencias de <br> repetidos dentro de bloques.
+            contenido.querySelectorAll('p, div, blockquote, li').forEach(el => {
+                let brPrevio = false;
+                [...el.childNodes].forEach(n => {
+                    if(n.nodeType === Node.ELEMENT_NODE && n.nodeName === 'BR') {
+                        if(brPrevio) n.remove();
+                        brPrevio = true;
+                    } else if(
+                        n.nodeType === Node.TEXT_NODE &&
+                        !(n.textContent || '').trim()
+                    ) {
+                        // Los nodos de texto vacíos no reinician la secuencia.
+                    } else {
+                        brPrevio = false;
+                    }
+                });
+            });
+
+            // Documento de impresión independiente: el layout del aula no interviene.
             const estilosPagina = [...document.head.querySelectorAll('style, link[rel="stylesheet"]')]
                 .map(nodo => nodo.outerHTML)
                 .join('\n');
@@ -765,7 +829,7 @@ ${estilosPagina}
 <style>
     @page {
         size: letter portrait;
-        margin: 13mm 15mm 14mm 15mm;
+        margin: 12mm 14mm 13mm 14mm;
     }
 
     html, body {
@@ -774,12 +838,14 @@ ${estilosPagina}
         width: auto !important;
         height: auto !important;
         min-height: 0 !important;
-        background: #ffffff !important;
+        background: #fff !important;
         overflow: visible !important;
     }
 
     body {
         color: #111827 !important;
+        font-size: 11.5pt !important;
+        line-height: 1.48 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
@@ -787,7 +853,6 @@ ${estilosPagina}
     #print-root {
         display: block !important;
         position: static !important;
-        float: none !important;
         width: 100% !important;
         max-width: none !important;
         height: auto !important;
@@ -795,57 +860,81 @@ ${estilosPagina}
         margin: 0 !important;
         padding: 0 !important;
         overflow: visible !important;
-        background: #ffffff !important;
+        background: #fff !important;
+        color: #111827 !important;
         box-shadow: none !important;
         border: 0 !important;
         transform: none !important;
     }
 
-    /* Elimina saltos heredados del editor que pueden crear páginas casi vacías. */
-    #print-root * {
-        animation: none !important;
-        transition: none !important;
-        break-before: auto !important;
-        break-after: auto !important;
-        page-break-before: auto !important;
-        page-break-after: auto !important;
-    }
-
-    /* Los bloques de texto pueden continuar naturalmente en la página siguiente. */
-    #print-root p,
-    #print-root div,
-    #print-root section,
-    #print-root article,
-    #print-root blockquote,
-    #print-root ul,
-    #print-root ol,
-    #print-root li {
+    /* Regla clave: no heredamos alturas ni espacios verticales exagerados del editor. */
+    #print-root p {
+        margin: 0 0 7px !important;
+        padding: 0 !important;
         min-height: 0 !important;
-        max-height: none !important;
-        break-inside: auto !important;
-        page-break-inside: auto !important;
-    }
-
-    #print-root p,
-    #print-root li,
-    #print-root blockquote {
+        height: auto !important;
+        line-height: 1.48 !important;
         orphans: 2;
         widows: 2;
     }
 
-    /* Mantiene cada título junto con el inicio del texto que le sigue. */
     #print-root h1,
     #print-root h2,
     #print-root h3,
     #print-root h4,
     #print-root h5,
     #print-root h6 {
+        margin: 13px 0 6px !important;
+        padding: 0 !important;
         min-height: 0 !important;
+        height: auto !important;
+        line-height: 1.25 !important;
         break-after: avoid-page !important;
         page-break-after: avoid !important;
     }
 
-    /* Solo los objetos que realmente conviene mantener enteros evitan cortes. */
+    #print-root ul,
+    #print-root ol {
+        margin: 5px 0 8px 22px !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }
+
+    #print-root li {
+        margin: 0 0 3px !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        line-height: 1.45 !important;
+    }
+
+    #print-root blockquote {
+        margin: 8px 0 8px 14px !important;
+        padding: 4px 0 4px 12px !important;
+        min-height: 0 !important;
+        height: auto !important;
+    }
+
+    #print-root div,
+    #print-root section,
+    #print-root article {
+        min-height: 0 !important;
+        max-height: none !important;
+        height: auto !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        break-before: auto !important;
+        break-after: auto !important;
+        break-inside: auto !important;
+        page-break-before: auto !important;
+        page-break-after: auto !important;
+        page-break-inside: auto !important;
+    }
+
+    /* Solo los objetos que verdaderamente conviene mantener enteros evitan cortes. */
     #print-root img,
     #print-root figure,
     #print-root tr,
@@ -854,12 +943,11 @@ ${estilosPagina}
         page-break-inside: avoid !important;
     }
 
-    #print-root table {
-        width: 100% !important;
+    #print-root figure {
+        margin: 9px auto !important;
+        padding: 0 !important;
         max-width: 100% !important;
-        table-layout: auto !important;
-        break-inside: auto !important;
-        page-break-inside: auto !important;
+        height: auto !important;
     }
 
     #print-root img {
@@ -867,14 +955,19 @@ ${estilosPagina}
         height: auto !important;
     }
 
-    #print-root figure {
+    #print-root table {
+        width: 100% !important;
         max-width: 100% !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
+        table-layout: auto !important;
+        margin: 8px 0 !important;
+        break-inside: auto !important;
+        page-break-inside: auto !important;
     }
 
     #print-root mjx-container {
         max-width: 100% !important;
+        margin-top: 6px !important;
+        margin-bottom: 6px !important;
     }
 
     #print-root pre,
@@ -887,6 +980,13 @@ ${estilosPagina}
         color: inherit !important;
         text-decoration: none !important;
     }
+
+    #print-root *,
+    #print-root *::before,
+    #print-root *::after {
+        animation: none !important;
+        transition: none !important;
+    }
 </style>
 </head>
 <body>
@@ -895,7 +995,6 @@ ${contenido.outerHTML}
 </html>`);
             docPrint.close();
 
-            // Espera fuentes e imágenes dentro del documento de impresión.
             if(docPrint.fonts?.ready) {
                 try { await docPrint.fonts.ready; } catch(_) {}
             }
@@ -917,7 +1016,6 @@ ${contenido.outerHTML}
             console.error("Error preparando impresión del resumen:", err);
             alert("No se pudo preparar el PDF. Intenta nuevamente.");
         } finally {
-            // Da tiempo a que el navegador abra el diálogo antes de retirar el documento temporal.
             setTimeout(() => iframeImpresion?.remove(), 1200);
 
             if(boton) {
