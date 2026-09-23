@@ -33,6 +33,7 @@ let temaActualInfo = null;
 let quizActivo = null;
 let temaEditandoId = null;
 let editorSavedRange = null;
+let simuladoresGuardadosCache = {};
 
 // ==========================================
 // ORDEN AMIGABLE DE MATERIAS, MÓDULOS Y TEMAS
@@ -688,58 +689,142 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-descargar-pdf')?.addEventListener('click', async () => {
         const elemento = document.getElementById('tema-resumen');
+        const boton = document.getElementById('btn-descargar-pdf');
         if(!elemento) return;
 
         const nombreArchivo = (temaActualInfo?.titulo || 'Resumen').replace(/\s+/g, '_') + '.pdf';
+        const textoBoton = boton?.innerHTML || '';
+        let contenedorTemporal = null;
 
-        // IMPORTANTE: aquí NO se vuelve a ejecutar MathJax.typesetPromise().
-        // La fórmula ya fue renderizada al abrir el tema. Volver a tipografiar el mismo
-        // nodo justo antes del PDF puede dejar varias capas de MathJax superpuestas.
-        // Esperamos únicamente dos frames para asegurar que el render visible esté estable.
-        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        try {
+            if(boton) {
+                boton.disabled = true;
+                boton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Generando PDF...`;
+            }
 
-        const esCapaAsistivaMathJax = (node) => {
-            if(!node || node.nodeType !== 1) return false;
-            const tag = (node.tagName || '').toLowerCase();
-            return tag === 'mjx-assistive-mml' ||
-                   node.classList?.contains('MJX_Assistive_MathML') ||
-                   node.getAttribute?.('aria-hidden') === 'true' && tag === 'math';
-        };
+            if(document.fonts?.ready) {
+                try { await document.fonts.ready; } catch(_) {}
+            }
+            if(window.MathJax?.startup?.promise) {
+                try { await window.MathJax.startup.promise; } catch(_) {}
+            }
 
-        const opt = {
-            margin:       0.5,
-            filename:     nombreArchivo,
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  {
-                scale: 2,
-                useCORS: true,
-                backgroundColor: '#FFFFFF',
-
-                // Evita que html2canvas capture la copia MathML invisible que MathJax
-                // mantiene para accesibilidad. La fórmula visual (mjx-container) se conserva.
-                ignoreElements: (node) => esCapaAsistivaMathJax(node),
-
-                // Refuerzo sobre la copia temporal usada por html2canvas. No modifica
-                // la vista del estudiante ni el contenido original de la página.
-                onclone: (clonedDocument) => {
-                    const resumenPDF = clonedDocument.getElementById('tema-resumen');
-                    if(!resumenPDF) return;
-
-                    resumenPDF.querySelectorAll(
-                        'mjx-assistive-mml, .MJX_Assistive_MathML'
-                    ).forEach(el => el.remove());
-
-                    // Conserva una sola salida visual de MathJax y evita que elementos
-                    // de accesibilidad ocultos reaparezcan durante la captura.
-                    resumenPDF.querySelectorAll('mjx-container').forEach(container => {
-                        container.querySelectorAll('[aria-hidden="true"] math').forEach(el => el.remove());
-                    });
+            const imagenes = [...elemento.querySelectorAll('img')];
+            await Promise.all(imagenes.map(img => new Promise(resolve => {
+                if(img.complete) {
+                    if(typeof img.decode === 'function') img.decode().catch(() => {}).finally(resolve);
+                    else resolve();
+                    return;
                 }
-            },
-            jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-        };
+                const terminar = () => resolve();
+                img.addEventListener('load', terminar, { once:true });
+                img.addEventListener('error', terminar, { once:true });
+                setTimeout(terminar, 3500);
+            })));
 
-        await html2pdf().set(opt).from(elemento).save();
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+            const rect = elemento.getBoundingClientRect();
+            const anchoVisible = Math.max(320, Math.ceil(rect.width));
+            const clon = elemento.cloneNode(true);
+            clon.id = 'tema-resumen-pdf-clone';
+
+            const originales = [elemento, ...elemento.querySelectorAll('*')];
+            const copias = [clon, ...clon.querySelectorAll('*')];
+
+            for(let i = 0; i < Math.min(originales.length, copias.length); i++) {
+                const original = originales[i];
+                const copia = copias[i];
+                if(!(original instanceof Element) || !(copia instanceof Element)) continue;
+
+                const estilos = getComputedStyle(original);
+                for(let j = 0; j < estilos.length; j++) {
+                    const prop = estilos[j];
+                    try {
+                        copia.style.setProperty(
+                            prop,
+                            estilos.getPropertyValue(prop),
+                            estilos.getPropertyPriority(prop)
+                        );
+                    } catch(_) {}
+                }
+
+                copia.style.animation = 'none';
+                copia.style.transition = 'none';
+                copia.style.caretColor = 'transparent';
+            }
+
+            clon.style.width = `${anchoVisible}px`;
+            clon.style.maxWidth = 'none';
+            clon.style.height = 'auto';
+            clon.style.minHeight = '0';
+            clon.style.overflow = 'visible';
+            clon.style.background = '#FFFFFF';
+
+            clon.querySelectorAll('mjx-assistive-mml, .MJX_Assistive_MathML').forEach(el => el.remove());
+            clon.querySelectorAll('mjx-container [aria-hidden="true"] math').forEach(el => el.remove());
+
+            clon.querySelectorAll('img, figure, table, tr, mjx-container').forEach(el => {
+                el.style.breakInside = 'avoid';
+                el.style.pageBreakInside = 'avoid';
+            });
+
+            contenedorTemporal = document.createElement('div');
+            contenedorTemporal.setAttribute('aria-hidden', 'true');
+            contenedorTemporal.style.position = 'fixed';
+            contenedorTemporal.style.left = '-100000px';
+            contenedorTemporal.style.top = '0';
+            contenedorTemporal.style.width = `${anchoVisible}px`;
+            contenedorTemporal.style.background = '#FFFFFF';
+            contenedorTemporal.style.zIndex = '-999999';
+            contenedorTemporal.appendChild(clon);
+            document.body.appendChild(contenedorTemporal);
+
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+            const opt = {
+                margin:       [0.38, 0.38, 0.38, 0.38],
+                filename:     nombreArchivo,
+                image:        { type: 'png', quality: 1 },
+                html2canvas:  {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: false,
+                    backgroundColor: '#FFFFFF',
+                    logging: false,
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: anchoVisible,
+                    ignoreElements: (node) => {
+                        if(!node || node.nodeType !== 1) return false;
+                        const tag = (node.tagName || '').toLowerCase();
+                        return tag === 'mjx-assistive-mml' ||
+                               node.classList?.contains('MJX_Assistive_MathML');
+                    }
+                },
+                pagebreak: {
+                    mode: ['css', 'legacy'],
+                    avoid: ['img', 'figure', 'table', 'tr', 'mjx-container']
+                },
+                jsPDF: {
+                    unit: 'in',
+                    format: 'letter',
+                    orientation: 'portrait',
+                    compress: true
+                }
+            };
+
+            await html2pdf().set(opt).from(clon).save();
+        } catch(err) {
+            console.error("Error generando PDF:", err);
+            alert("No se pudo generar el PDF. Intenta nuevamente.");
+        } finally {
+            contenedorTemporal?.remove();
+            if(boton) {
+                boton.disabled = false;
+                boton.innerHTML = textoBoton;
+            }
+        }
     });
 
     // ==========================================
@@ -1361,18 +1446,162 @@ window.abrirTema = async function(temaId, matId, matNombre, modNombre) {
 
 async function cargarSimuladoresGuardados() {
     const cont = document.getElementById('lista-simuladores-guardados');
-    cont.innerHTML = "<p>Cargando historial...</p>";
-    const snap = await getDocs(query(collection(db, "usuarios", usuarioActual.uid, "simuladores_guardados"), where("tema_id", "==", temaActualInfo.id)));
-    
-    if(snap.empty) { cont.innerHTML = "<p style='font-size:13px; color:var(--text-light);'>No has realizado ninguna evaluación previa guardada.</p>"; return; }
+    if(!cont || !usuarioActual?.uid || !temaActualInfo?.id) return;
 
-    let html = ""; let i = 1;
-    snap.forEach(d => {
-        const p = JSON.stringify(d.data().preguntas).replace(/'/g, "&apos;").replace(/"/g, "&quot;");
-        html += `<button class="btn-outline" style="justify-content: flex-start; text-align: left; padding: 12px;" onclick="iniciarQuiz(${p})"><i class="fas fa-file-signature"></i> Evaluación Pasada #${i++}</button>`;
-    });
-    cont.innerHTML = html;
+    cont.innerHTML = "<p style='font-size:13px;color:var(--text-light);'>Cargando historial...</p>";
+    simuladoresGuardadosCache = {};
+
+    try {
+        const snap = await getDocs(query(
+            collection(db, "usuarios", usuarioActual.uid, "simuladores_guardados"),
+            where("tema_id", "==", temaActualInfo.id)
+        ));
+
+        if(snap.empty) {
+            cont.innerHTML = "<p style='font-size:13px; color:var(--text-light);'>No has realizado ninguna evaluación previa guardada.</p>";
+            return;
+        }
+
+        const intentos = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+
+        cont.innerHTML = intentos.map((data, index) => {
+            simuladoresGuardadosCache[data.id] = data;
+
+            const puntaje = Number.isFinite(Number(data.puntaje)) ? Number(data.puntaje) : null;
+            const total = Number.isFinite(Number(data.total))
+                ? Number(data.total)
+                : (Array.isArray(data.preguntas) ? data.preguntas.length : null);
+
+            const fecha = data.fecha ? new Date(data.fecha) : null;
+            const fechaTxt = fecha && !Number.isNaN(fecha.getTime())
+                ? fecha.toLocaleString('es-EC')
+                : "";
+
+            const resultado = puntaje !== null && total !== null
+                ? `<strong style="color:var(--primary-light);">${puntaje}/${total}</strong>`
+                : `<strong style="color:var(--text-light);">Revisar</strong>`;
+
+            return `<button class="btn-outline"
+                        style="justify-content:space-between;text-align:left;padding:12px 14px;gap:12px;"
+                        onclick="revisarSimuladorGuardado('${data.id}')">
+                        <span style="display:flex;align-items:center;gap:9px;">
+                            <i class="fas fa-lock" style="color:#64748B;"></i>
+                            <span>
+                                <strong>Práctica realizada #${intentos.length - index}</strong>
+                                ${fechaTxt ? `<small style="display:block;color:var(--text-light);margin-top:2px;">${escapeHTML(fechaTxt)}</small>` : ''}
+                            </span>
+                        </span>
+                        ${resultado}
+                    </button>`;
+        }).join('');
+    } catch(err) {
+        console.error("Error cargando simuladores guardados:", err);
+        cont.innerHTML = "<p style='font-size:13px;color:var(--danger);'>No se pudo cargar el historial de prácticas.</p>";
+    }
 }
+
+window.revisarSimuladorGuardado = function(intentoId) {
+    const intento = simuladoresGuardadosCache[intentoId];
+    if(!intento) {
+        alert("No se pudo abrir esta práctica. Vuelve a entrar al tema e inténtalo nuevamente.");
+        return;
+    }
+
+    const preguntasGuardadas = Array.isArray(intento.preguntas) ? intento.preguntas : [];
+    const respuestasGuardadas = Array.isArray(intento.respuestas) ? intento.respuestas : [];
+
+    if(!preguntasGuardadas.length) {
+        alert("Esta práctica no contiene preguntas guardadas.");
+        return;
+    }
+
+    quizActivo = preguntasGuardadas;
+    document.getElementById('quiz-titulo').textContent = intento.tema_titulo || temaActualInfo?.titulo || "Práctica";
+    document.getElementById('quiz-subtitulo').textContent = "Revisión bloqueada de tu práctica guardada";
+    document.getElementById('btn-enviar-quiz')?.classList.add('hidden');
+
+    const cont = document.getElementById('quiz-preguntas-container');
+    cont.innerHTML = preguntasGuardadas.map((p, idx) => {
+        const rawRespuesta = respuestasGuardadas[idx] !== undefined
+            ? respuestasGuardadas[idx]
+            : p.respuesta_usuario;
+
+        const tieneRespuesta =
+            rawRespuesta !== null &&
+            rawRespuesta !== undefined &&
+            rawRespuesta !== "" &&
+            Number.isInteger(Number(rawRespuesta));
+
+        const respuestaAlumno = tieneRespuesta ? Number(rawRespuesta) : null;
+        const correcta = Number(p.respuesta_correcta);
+        const opciones = Array.isArray(p.opciones) ? p.opciones : [];
+
+        const opcionesHtml = opciones.map((op, opIdx) => {
+            const esCorrecta = opIdx === correcta;
+            const fueAlumno = respuestaAlumno === opIdx;
+
+            let fondo = "#FFFFFF";
+            let borde = "#CBD5E1";
+            let etiqueta = "";
+
+            if(esCorrecta) {
+                fondo = "#ECFDF5";
+                borde = "#86EFAC";
+                etiqueta = fueAlumno
+                    ? `<strong style="margin-left:8px;color:rgb(58,124,34);">✓ Tu respuesta · Correcta</strong>`
+                    : `<strong style="margin-left:8px;color:rgb(58,124,34);">✓ Respuesta correcta</strong>`;
+            } else if(fueAlumno) {
+                fondo = "#FEF2F2";
+                borde = "#FCA5A5";
+                etiqueta = `<strong style="margin-left:8px;color:#B91C1C;">✗ Tu respuesta</strong>`;
+            }
+
+            return `<label class="quiz-option" style="cursor:default;background:${fondo};border-color:${borde};">
+                        <input type="radio" name="rev-q${idx}" value="${opIdx}" disabled ${fueAlumno ? 'checked' : ''}>
+                        <span>${escapeHTML(op)}${etiqueta}</span>
+                    </label>`;
+        }).join('');
+
+        const avisoSinRespuesta = !tieneRespuesta
+            ? `<div style="margin:8px 0 0;color:#B45309;font-size:12px;font-weight:700;">No quedó registrada una respuesta del alumno en este intento.</div>`
+            : '';
+
+        return `<div class="instruction-card" style="margin-bottom:15px;">
+                    <p style="font-weight:700;">${idx + 1}. ${escapeHTML(p.enunciado || '')}</p>
+                    ${opcionesHtml}
+                    ${avisoSinRespuesta}
+                    <div style="margin-top:12px;background:#EFF6FF;padding:12px;border-radius:8px;font-size:13px;color:#1E3A8A;line-height:1.55;">
+                        <strong>Explicación de la IA:</strong> ${escapeHTML(p.explicacion || 'No hay explicación guardada para esta pregunta.')}
+                    </div>
+                </div>`;
+    }).join('');
+
+    const puntaje = Number.isFinite(Number(intento.puntaje)) ? Number(intento.puntaje) : null;
+    const total = Number.isFinite(Number(intento.total)) ? Number(intento.total) : preguntasGuardadas.length;
+    const porcentaje = Number.isFinite(Number(intento.porcentaje)) ? Number(intento.porcentaje) : null;
+
+    const resDiv = document.getElementById('quiz-resultado');
+    if(resDiv) {
+        resDiv.innerHTML = `
+            <h3 style="margin-bottom:6px;">Resultado guardado</h3>
+            <p style="font-size:36px;font-weight:800;color:var(--primary-light);margin:0;">
+                ${puntaje !== null ? puntaje : '—'} / ${total}
+            </p>
+            ${porcentaje !== null ? `<p style="margin:6px 0 0;font-weight:700;">${porcentaje}% de aciertos</p>` : ''}
+            <p style="color:var(--text-light);margin:8px 0 0;">
+                Esta práctica está bloqueada. Puedes revisar tus respuestas y las explicaciones, pero no volver a contestarla.
+            </p>`;
+        resDiv.classList.remove('hidden');
+    }
+
+    mostrarVista('view-quiz');
+
+    if(window.MathJax?.typesetPromise) {
+        MathJax.typesetPromise([cont]).catch(err => console.log('Error renderizando LaTeX:', err));
+    }
+};
 
 window.iniciarQuiz = function(preguntas) {
     quizActivo = preguntas;
@@ -1529,26 +1758,34 @@ window.verPruebasAlumno = async function(uidCodificado, emailCodificado, nombreC
     const nombre = decodeURIComponent(nombreCodificado || '');
 
     if(!uid) {
-        cont.innerHTML = `<span style="color:var(--warning);font-size:12px;">El alumno debe iniciar sesión una vez para asociar su UID.</span>`;
+        cont.innerHTML = `<div style="padding:10px;border-radius:8px;background:#FFF7ED;color:#9A3412;font-size:12px;">
+            Este alumno todavía no tiene el UID asociado. Debe entrar al aula al menos una vez con esta versión para que el administrador pueda gestionar su progreso.
+        </div>`;
         return;
     }
 
-    cont.innerHTML = `<p style="color:var(--text-light);font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Cargando pruebas de ${escapeHTML(nombre || email)}...</p>`;
+    cont.innerHTML = `<p style="color:var(--text-light);font-size:12px;"><i class="fas fa-spinner fa-spin"></i> Cargando progreso de ${escapeHTML(nombre || email)}...</p>`;
 
     try {
-        const snap = await getDocs(collection(db, "usuarios", uid, "simuladores_guardados"));
-        if(snap.empty) {
-            cont.innerHTML = `<p style="color:var(--text-light);font-size:12px;">${escapeHTML(nombre || email)} no tiene pruebas guardadas.</p>`;
-            return;
-        }
+        const [snapIntentos, snapProgMod, snapModulos] = await Promise.all([
+            getDocs(collection(db, "usuarios", uid, "simuladores_guardados")),
+            getDocs(collection(db, "usuarios", uid, "progreso_modulos")),
+            getDocs(collection(db, "modulos"))
+        ]);
 
-        const intentos = snap.docs
+        const intentos = snapIntentos.docs
             .map(d => ({ id:d.id, ...d.data() }))
             .sort((a,b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
 
-        cont.innerHTML = `
-            <div style="margin-bottom:10px;font-size:13px;"><strong>${escapeHTML(nombre || email)}</strong> <span style="color:var(--text-light);">· ${escapeHTML(email)}</span></div>
-            ${intentos.map((data) => {
+        const modulosMap = {};
+        snapModulos.forEach(d => modulosMap[d.id] = d.data()?.nombre || "Módulo");
+
+        const evaluaciones = snapProgMod.docs
+            .map(d => ({ id:d.id, ...d.data() }))
+            .filter(x => x.evaluacion_completada === true);
+
+        const practicasHtml = intentos.length
+            ? intentos.map((data) => {
                 const fecha = data.fecha ? new Date(data.fecha) : null;
                 const fechaTxt = fecha && !Number.isNaN(fecha.getTime()) ? fecha.toLocaleString('es-EC') : 'Fecha no disponible';
                 const tema = data.tema_titulo || data.tema_id || 'Tema';
@@ -1563,15 +1800,80 @@ window.verPruebasAlumno = async function(uidCodificado, emailCodificado, nombreC
                     </div>
                     <button class="btn-danger admin-mini-btn"
                         onclick="eliminarPruebaAlumno('${encodeURIComponent(uid)}','${encodeURIComponent(data.id)}','${encodeURIComponent(data.tema_id || '')}','${encodeURIComponent(nombre || email)}')"
-                        title="Eliminar prueba y devolver el tema a En progreso">
-                        <i class="fas fa-trash"></i> Eliminar prueba
+                        title="Eliminar práctica y devolver el tema a En progreso">
+                        <i class="fas fa-trash"></i> Dar de baja práctica
                     </button>
                 </div>`;
-            }).join('')}
+            }).join('')
+            : `<div class="admin-empty-state" style="min-height:60px;"><span>No tiene prácticas guardadas.</span></div>`;
+
+        const evaluacionesHtml = evaluaciones.length
+            ? evaluaciones.map(data => {
+                const moduloNombre = modulosMap[data.id] || data.modulo_nombre || "Módulo";
+                const fecha = data.fecha_evaluacion ? new Date(data.fecha_evaluacion) : null;
+                const fechaTxt = fecha && !Number.isNaN(fecha.getTime()) ? fecha.toLocaleString('es-EC') : 'Marcada como realizada';
+
+                return `<div class="admin-list-row" style="align-items:center;">
+                    <div class="admin-row-main">
+                        <strong>${escapeHTML(moduloNombre)}</strong>
+                        <small>${escapeHTML(fechaTxt)}</small>
+                    </div>
+                    <button class="btn-outline admin-mini-btn"
+                        onclick="desmarcarEvaluacionModulo('${encodeURIComponent(uid)}','${encodeURIComponent(data.id)}','${encodeURIComponent(nombre || email)}','${encodeURIComponent(email)}')"
+                        title="Desmarcar evaluación final y devolver el módulo a En progreso">
+                        <i class="fas fa-rotate-left"></i> Desmarcar evaluación
+                    </button>
+                </div>`;
+            }).join('')
+            : `<div class="admin-empty-state" style="min-height:60px;"><span>No tiene evaluaciones finales marcadas como realizadas.</span></div>`;
+
+        cont.innerHTML = `
+            <div style="margin-bottom:12px;font-size:13px;">
+                <strong>${escapeHTML(nombre || email)}</strong>
+                <span style="color:var(--text-light);"> · ${escapeHTML(email)}</span>
+            </div>
+
+            <div style="margin-top:10px;">
+                <h5 style="margin:0 0 8px;color:var(--primary);font-size:13px;"><i class="fas fa-list-check"></i> Prácticas de temas</h5>
+                ${practicasHtml}
+            </div>
+
+            <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border);">
+                <h5 style="margin:0 0 8px;color:var(--primary);font-size:13px;"><i class="fas fa-flag-checkered"></i> Evaluaciones finales de módulo</h5>
+                ${evaluacionesHtml}
+            </div>
         `;
     } catch(err) {
-        console.error("Error cargando pruebas del alumno:", err);
-        cont.innerHTML = `<p style="color:var(--danger);font-size:12px;">No se pudieron cargar las pruebas. ${escapeHTML(err.message || '')}</p>`;
+        console.error("Error cargando progreso del alumno:", err);
+        cont.innerHTML = `<p style="color:var(--danger);font-size:12px;">No se pudo cargar el progreso. ${escapeHTML(err.message || '')}</p>`;
+    }
+};
+
+window.desmarcarEvaluacionModulo = async function(uidCodificado, moduloCodificado, nombreCodificado, emailCodificado) {
+    const uid = decodeURIComponent(uidCodificado || '');
+    const moduloId = decodeURIComponent(moduloCodificado || '');
+    const nombre = decodeURIComponent(nombreCodificado || '');
+    const email = decodeURIComponent(emailCodificado || '');
+
+    if(!uid || !moduloId) return;
+    if(!confirm(`¿Desmarcar la evaluación final de ${nombre || 'este alumno'}? El módulo volverá a En progreso y el carrito regresará a la estación de evaluación.`)) return;
+
+    try {
+        await setDoc(doc(db, "usuarios", uid, "progreso_modulos", moduloId), {
+            evaluacion_completada: false,
+            fecha_reinicio_admin: new Date().toISOString()
+        }, { merge: true });
+
+        alert("Evaluación final desmarcada. El módulo volvió a En progreso.");
+
+        await window.verPruebasAlumno(
+            encodeURIComponent(uid),
+            encodeURIComponent(email),
+            encodeURIComponent(nombre || email)
+        );
+    } catch(err) {
+        console.error("No se pudo desmarcar la evaluación final:", err);
+        alert("No se pudo desmarcar la evaluación final: " + (err.message || "Error desconocido"));
     }
 };
 
@@ -1597,7 +1899,12 @@ window.eliminarPruebaAlumno = async function(uidCodificado, intentoCodificado, t
             try {
                 const temaSnap = await getDoc(doc(db, "temas_globales", temaId));
                 const moduloId = temaSnap.exists() ? temaSnap.data()?.modulo_id : "";
-                if(moduloId) await deleteDoc(doc(db, "usuarios", uid, "progreso_modulos", moduloId));
+                if(moduloId) {
+                    await setDoc(doc(db, "usuarios", uid, "progreso_modulos", moduloId), {
+                        evaluacion_completada: false,
+                        fecha_reinicio_admin: new Date().toISOString()
+                    }, { merge: true });
+                }
             } catch(errModulo) {
                 console.warn("No se pudo reiniciar el progreso de evaluación del módulo:", errModulo);
             }
