@@ -561,6 +561,7 @@ function limpiarFormularioTemaAdmin() {
     document.getElementById('admin-tema-videos').value = '';
     document.getElementById('admin-tema-laboratorio').value = '';
     document.getElementById('admin-tema-imagenes').value = '';
+    document.getElementById('admin-tema-pdf').value = '';
     const editor = getRichEditor();
     if(editor) editor.innerHTML = '';
     editorSavedRange = null;
@@ -604,6 +605,7 @@ window.editarTema = async function(id) {
         document.getElementById('admin-tema-videos').value = (data.videos_recomendados || []).join('\n');
         document.getElementById('admin-tema-laboratorio').value = data.video_laboratorio || '';
         document.getElementById('admin-tema-imagenes').value = (data.imagenes || []).join('\n');
+        document.getElementById('admin-tema-pdf').value = data.archivo_pdf || '';
 
         const editor = getRichEditor();
         const contenido = data.resumen_teorico || '';
@@ -687,342 +689,41 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.getElementById('btn-descargar-pdf')?.addEventListener('click', async () => {
-        const elemento = document.getElementById('tema-resumen');
-        const boton = document.getElementById('btn-descargar-pdf');
-        if(!elemento) return;
+    // ==========================================
+    // PDF DEL TEMA: DESCARGA DIRECTA DEL ARCHIVO SUBIDO A /imagenes/
+    // ==========================================
+    document.getElementById('btn-descargar-pdf')?.addEventListener('click', () => {
+        const archivo = String(temaActualInfo?.archivo_pdf || '').trim();
 
-        const textoBoton = boton?.innerHTML || '';
-        let iframeImpresion = null;
-
-        try {
-            if(boton) {
-                boton.disabled = true;
-                boton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Preparando PDF...`;
-            }
-
-            // Espera a que fuentes, imágenes y MathJax estén listos antes de copiar el contenido.
-            if(document.fonts?.ready) {
-                try { await document.fonts.ready; } catch(_) {}
-            }
-            if(window.MathJax?.startup?.promise) {
-                try { await window.MathJax.startup.promise; } catch(_) {}
-            }
-
-            const imagenes = [...elemento.querySelectorAll('img')];
-            await Promise.all(imagenes.map(img => new Promise(resolve => {
-                if(img.complete) {
-                    if(typeof img.decode === 'function') img.decode().catch(() => {}).finally(resolve);
-                    else resolve();
-                    return;
-                }
-                const terminar = () => resolve();
-                img.addEventListener('load', terminar, { once:true });
-                img.addEventListener('error', terminar, { once:true });
-                setTimeout(terminar, 3000);
-            })));
-
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-            // Trabajamos SIEMPRE sobre una copia. La vista del estudiante no se modifica.
-            const contenido = elemento.cloneNode(true);
-            contenido.id = "print-root";
-
-            // Elimina las capas invisibles de MathJax que pueden duplicar fórmulas al imprimir.
-            contenido.querySelectorAll(
-                'mjx-assistive-mml, .MJX_Assistive_MathML'
-            ).forEach(el => el.remove());
-            contenido.querySelectorAll('mjx-container [aria-hidden="true"] math').forEach(el => el.remove());
-
-            // Limpieza específica para contenido pegado/editado:
-            // Word, navegadores y editores suelen dejar alturas, márgenes y saltos enormes.
-            // Aquí se eliminan SOLO en la copia de impresión.
-            const bloquesNormalizables = contenido.querySelectorAll(
-                'p, div, section, article, header, footer, aside, blockquote, ul, ol, li, h1, h2, h3, h4, h5, h6, figure'
-            );
-
-            bloquesNormalizables.forEach(el => {
-                [
-                    'height', 'min-height', 'max-height',
-                    'margin-top', 'margin-bottom',
-                    'padding-top', 'padding-bottom',
-                    'break-before', 'break-after', 'break-inside',
-                    'page-break-before', 'page-break-after', 'page-break-inside'
-                ].forEach(prop => el.style.removeProperty(prop));
-
-                // Evita que posiciones heredadas saquen elementos de su flujo natural.
-                const pos = String(el.style.position || '').toLowerCase();
-                if(['absolute', 'fixed', 'sticky'].includes(pos)) {
-                    el.style.removeProperty('position');
-                    el.style.removeProperty('top');
-                    el.style.removeProperty('bottom');
-                    el.style.removeProperty('left');
-                    el.style.removeProperty('right');
-                }
-            });
-
-            // Quita párrafos/divs vacíos usados como "espaciadores".
-            // Conserva cualquier bloque que contenga una imagen, tabla, fórmula u otro contenido real.
-            [...contenido.querySelectorAll('p, div')].forEach(el => {
-                const tieneContenidoVisual = el.querySelector(
-                    'img, svg, table, figure, video, iframe, mjx-container, math, hr'
-                );
-                const texto = (el.textContent || '')
-                    .replace(/\u00a0/g, ' ')
-                    .replace(/\s+/g, '')
-                    .trim();
-
-                const soloSaltos = !texto &&
-                    !tieneContenidoVisual &&
-                    [...el.childNodes].every(n =>
-                        n.nodeType === Node.TEXT_NODE ||
-                        (n.nodeType === Node.ELEMENT_NODE && ['BR', 'SPAN'].includes(n.nodeName))
-                    );
-
-                if(soloSaltos) el.remove();
-            });
-
-            // Reduce secuencias de <br> repetidos dentro de bloques.
-            contenido.querySelectorAll('p, div, blockquote, li').forEach(el => {
-                let brPrevio = false;
-                [...el.childNodes].forEach(n => {
-                    if(n.nodeType === Node.ELEMENT_NODE && n.nodeName === 'BR') {
-                        if(brPrevio) n.remove();
-                        brPrevio = true;
-                    } else if(
-                        n.nodeType === Node.TEXT_NODE &&
-                        !(n.textContent || '').trim()
-                    ) {
-                        // Los nodos de texto vacíos no reinician la secuencia.
-                    } else {
-                        brPrevio = false;
-                    }
-                });
-            });
-
-            // Documento de impresión independiente: el layout del aula no interviene.
-            const estilosPagina = [...document.head.querySelectorAll('style, link[rel="stylesheet"]')]
-                .map(nodo => nodo.outerHTML)
-                .join('\n');
-
-            iframeImpresion = document.createElement('iframe');
-            iframeImpresion.setAttribute('aria-hidden', 'true');
-            iframeImpresion.tabIndex = -1;
-            iframeImpresion.style.position = 'fixed';
-            iframeImpresion.style.right = '0';
-            iframeImpresion.style.bottom = '0';
-            iframeImpresion.style.width = '1px';
-            iframeImpresion.style.height = '1px';
-            iframeImpresion.style.border = '0';
-            iframeImpresion.style.opacity = '0';
-            iframeImpresion.style.pointerEvents = 'none';
-            document.body.appendChild(iframeImpresion);
-
-            const docPrint = iframeImpresion.contentDocument;
-            docPrint.open();
-            docPrint.write(`<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-${estilosPagina}
-<style>
-    @page {
-        size: letter portrait;
-        margin: 12mm 14mm 13mm 14mm;
-    }
-
-    html, body {
-        margin: 0 !important;
-        padding: 0 !important;
-        width: auto !important;
-        height: auto !important;
-        min-height: 0 !important;
-        background: #fff !important;
-        overflow: visible !important;
-    }
-
-    body {
-        color: #111827 !important;
-        font-size: 11.5pt !important;
-        line-height: 1.48 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    #print-root {
-        display: block !important;
-        position: static !important;
-        width: 100% !important;
-        max-width: none !important;
-        height: auto !important;
-        min-height: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
-        background: #fff !important;
-        color: #111827 !important;
-        box-shadow: none !important;
-        border: 0 !important;
-        transform: none !important;
-    }
-
-    /* Regla clave: no heredamos alturas ni espacios verticales exagerados del editor. */
-    #print-root p {
-        margin: 0 0 7px !important;
-        padding: 0 !important;
-        min-height: 0 !important;
-        height: auto !important;
-        line-height: 1.48 !important;
-        orphans: 2;
-        widows: 2;
-    }
-
-    #print-root h1,
-    #print-root h2,
-    #print-root h3,
-    #print-root h4,
-    #print-root h5,
-    #print-root h6 {
-        margin: 13px 0 6px !important;
-        padding: 0 !important;
-        min-height: 0 !important;
-        height: auto !important;
-        line-height: 1.25 !important;
-        break-after: avoid-page !important;
-        page-break-after: avoid !important;
-    }
-
-    #print-root ul,
-    #print-root ol {
-        margin: 5px 0 8px 22px !important;
-        padding: 0 !important;
-        min-height: 0 !important;
-        height: auto !important;
-    }
-
-    #print-root li {
-        margin: 0 0 3px !important;
-        padding: 0 !important;
-        min-height: 0 !important;
-        height: auto !important;
-        line-height: 1.45 !important;
-    }
-
-    #print-root blockquote {
-        margin: 8px 0 8px 14px !important;
-        padding: 4px 0 4px 12px !important;
-        min-height: 0 !important;
-        height: auto !important;
-    }
-
-    #print-root div,
-    #print-root section,
-    #print-root article {
-        min-height: 0 !important;
-        max-height: none !important;
-        height: auto !important;
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        break-before: auto !important;
-        break-after: auto !important;
-        break-inside: auto !important;
-        page-break-before: auto !important;
-        page-break-after: auto !important;
-        page-break-inside: auto !important;
-    }
-
-    /* Solo los objetos que verdaderamente conviene mantener enteros evitan cortes. */
-    #print-root img,
-    #print-root figure,
-    #print-root tr,
-    #print-root mjx-container[display="true"] {
-        break-inside: avoid-page !important;
-        page-break-inside: avoid !important;
-    }
-
-    #print-root figure {
-        margin: 9px auto !important;
-        padding: 0 !important;
-        max-width: 100% !important;
-        height: auto !important;
-    }
-
-    #print-root img {
-        max-width: 100% !important;
-        height: auto !important;
-    }
-
-    #print-root table {
-        width: 100% !important;
-        max-width: 100% !important;
-        table-layout: auto !important;
-        margin: 8px 0 !important;
-        break-inside: auto !important;
-        page-break-inside: auto !important;
-    }
-
-    #print-root mjx-container {
-        max-width: 100% !important;
-        margin-top: 6px !important;
-        margin-bottom: 6px !important;
-    }
-
-    #print-root pre,
-    #print-root code {
-        white-space: pre-wrap !important;
-        overflow-wrap: anywhere !important;
-    }
-
-    #print-root a {
-        color: inherit !important;
-        text-decoration: none !important;
-    }
-
-    #print-root *,
-    #print-root *::before,
-    #print-root *::after {
-        animation: none !important;
-        transition: none !important;
-    }
-</style>
-</head>
-<body>
-${contenido.outerHTML}
-</body>
-</html>`);
-            docPrint.close();
-
-            if(docPrint.fonts?.ready) {
-                try { await docPrint.fonts.ready; } catch(_) {}
-            }
-
-            const imgsPrint = [...docPrint.images];
-            await Promise.all(imgsPrint.map(img => new Promise(resolve => {
-                if(img.complete) return resolve();
-                img.addEventListener('load', resolve, { once:true });
-                img.addEventListener('error', resolve, { once:true });
-                setTimeout(resolve, 3000);
-            })));
-
-            await new Promise(resolve => setTimeout(resolve, 180));
-
-            const winPrint = iframeImpresion.contentWindow;
-            winPrint.focus();
-            winPrint.print();
-        } catch(err) {
-            console.error("Error preparando impresión del resumen:", err);
-            alert("No se pudo preparar el PDF. Intenta nuevamente.");
-        } finally {
-            setTimeout(() => iframeImpresion?.remove(), 1200);
-
-            if(boton) {
-                boton.disabled = false;
-                boton.innerHTML = textoBoton;
-            }
+        if(!archivo) {
+            alert("Este tema todavía no tiene un PDF asignado.");
+            return;
         }
+
+        // Permite escribir "archivo.pdf" o "imagenes/archivo.pdf" en el administrador.
+        const limpio = archivo
+            .replace(/\\/g, '/')
+            .replace(/^\.?\/?imagenes\//i, '')
+            .replace(/^\/+/, '');
+
+        if(!limpio) {
+            alert("El nombre del PDF asignado no es válido.");
+            return;
+        }
+
+        const rutaSegura = limpio
+            .split('/')
+            .filter(Boolean)
+            .map(parte => encodeURIComponent(parte))
+            .join('/');
+
+        const enlace = document.createElement('a');
+        enlace.href = `./imagenes/${rutaSegura}`;
+        enlace.download = limpio.split('/').pop() || 'tema.pdf';
+        enlace.rel = 'noopener';
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
     });
 
     // ==========================================
@@ -1073,6 +774,7 @@ ${contenido.outerHTML}
         const videosRaw = document.getElementById('admin-tema-videos').value;
         const video_laboratorio = document.getElementById('admin-tema-laboratorio').value.trim();
         const imagenesRaw = document.getElementById('admin-tema-imagenes').value;
+        const archivo_pdf = document.getElementById('admin-tema-pdf').value.trim();
         const status = document.getElementById('admin-status');
 
         if(!materia_id || !modulo_id || !titulo) return alert("Selecciona materia, módulo e ingresa el título del tema.");
@@ -1098,6 +800,7 @@ ${contenido.outerHTML}
                 lecturas_recomendadas: parseLinks(lecturasRaw),
                 videos_recomendados: parseSimpleList(videosRaw),
                 imagenes: parseSimpleList(imagenesRaw),
+                archivo_pdf,
                 video_laboratorio,
                 fecha_actualizacion: new Date().toISOString()
             };
@@ -1562,6 +1265,13 @@ window.abrirTema = async function(temaId, matId, matNombre, modNombre) {
 
         document.getElementById('tema-titulo').textContent = data.titulo;
         actualizarRuta(matNombre, modNombre, data.titulo);
+
+        const btnPdfTema = document.getElementById('btn-descargar-pdf');
+        if(btnPdfTema) {
+            const tienePdf = Boolean(String(data.archivo_pdf || '').trim());
+            btnPdfTema.classList.toggle('hidden', !tienePdf);
+            btnPdfTema.title = tienePdf ? `Descargar ${data.archivo_pdf}` : 'Este tema no tiene PDF asignado';
+        }
 
         const progRef = doc(db, "usuarios", usuarioActual.uid, "progreso_temas", temaId);
         const progSnap = await getDoc(progRef);
