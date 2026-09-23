@@ -21,8 +21,6 @@
     
     <!-- FontAwesome para Iconos -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- html2pdf para descargar resúmenes en PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
         :root {
@@ -50,7 +48,7 @@
 
             --color-materia: #3B82F6;
             --color-modulo: #8B5CF6;
-            --color-tema: #10B981;
+            --color-tema: rgb(58, 124, 34);
         }
 
         * { box-sizing: border-box; }
@@ -1435,9 +1433,9 @@
             <!-- CONTENIDO: TEXTOS -->
             <div id="acc-textos" class="recurso-content hidden">
                 <div class="instruction-card" style="margin-top: 0; border: none; box-shadow: none; padding: 0;">
-                    <h4 style="margin: 0 0 16px; color: var(--primary-light); font-size: 23px; text-align: center; font-weight: 900;">Resumen</h4>
+                    <h4 style="margin: 0 0 16px; color: var(--primary-light); font-size: 28px; text-align: center; font-weight: 900;">Resumen</h4>
                     <div id="tema-resumen" style="line-height: 1.7; font-size: 15px; background: #F8FAFC; padding: 20px; border-radius: 8px;"></div>
-                    <button id="btn-descargar-pdf" class="btn-danger" style="margin-top: 20px;"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+                    <button id="btn-descargar-pdf" class="btn-danger hidden" style="margin-top: 20px;"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
                 </div>
                 
                 <div class="instruction-card" style="border: none; box-shadow: none; padding: 20px 0 0 0;">
@@ -1654,6 +1652,13 @@
                     <div class="input-group">
                         <label>Imágenes (Un nombre de archivo por línea con su extensión)</label>
                         <textarea id="admin-tema-imagenes" rows="2" placeholder="ejemplo1.jpg&#10;grafico2.png"></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>PDF del Tema (archivo dentro de la carpeta imagenes)</label>
+                        <input type="text" id="admin-tema-pdf" class="input-text" placeholder="Ej: axiomas-de-cuerpo.pdf">
+                        <div style="font-size:12px; color:var(--text-light); margin-top:6px; line-height:1.45;">
+                            Sube el PDF a <b>imagenes/</b> en GitHub y escribe aquí únicamente el nombre del archivo.
+                        </div>
                     </div>
                     <div class="admin-save-row">
                         <button id="btn-admin-guardar-tema" class="btn-success">
