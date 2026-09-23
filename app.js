@@ -692,16 +692,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const boton = document.getElementById('btn-descargar-pdf');
         if(!elemento) return;
 
-        const nombreArchivo = (temaActualInfo?.titulo || 'Resumen').replace(/\s+/g, '_') + '.pdf';
         const textoBoton = boton?.innerHTML || '';
-        let contenedorTemporal = null;
+        let printContainer = null;
+        let printStyle = null;
 
         try {
             if(boton) {
                 boton.disabled = true;
-                boton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Generando PDF...`;
+                boton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Preparando impresión...`;
             }
 
+            // Espera a que fuentes, imágenes y MathJax terminen de renderizar.
             if(document.fonts?.ready) {
                 try { await document.fonts.ready; } catch(_) {}
             }
@@ -719,107 +720,148 @@ document.addEventListener('DOMContentLoaded', () => {
                 const terminar = () => resolve();
                 img.addEventListener('load', terminar, { once:true });
                 img.addEventListener('error', terminar, { once:true });
-                setTimeout(terminar, 3500);
+                setTimeout(terminar, 3000);
             })));
 
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-            const rect = elemento.getBoundingClientRect();
-            const anchoVisible = Math.max(320, Math.ceil(rect.width));
+            // Crea una copia dedicada exclusivamente a impresión.
+            // No modifica ni mueve el contenido visible del aula.
             const clon = elemento.cloneNode(true);
-            clon.id = 'tema-resumen-pdf-clone';
+            clon.id = "print-only-resumen";
 
-            const originales = [elemento, ...elemento.querySelectorAll('*')];
-            const copias = [clon, ...clon.querySelectorAll('*')];
+            // MathJax incluye una capa invisible de accesibilidad.
+            // Se elimina solo en la copia de impresión para evitar duplicados.
+            clon.querySelectorAll(
+                'mjx-assistive-mml, .MJX_Assistive_MathML'
+            ).forEach(el => el.remove());
 
-            for(let i = 0; i < Math.min(originales.length, copias.length); i++) {
-                const original = originales[i];
-                const copia = copias[i];
-                if(!(original instanceof Element) || !(copia instanceof Element)) continue;
-
-                const estilos = getComputedStyle(original);
-                for(let j = 0; j < estilos.length; j++) {
-                    const prop = estilos[j];
-                    try {
-                        copia.style.setProperty(
-                            prop,
-                            estilos.getPropertyValue(prop),
-                            estilos.getPropertyPriority(prop)
-                        );
-                    } catch(_) {}
-                }
-
-                copia.style.animation = 'none';
-                copia.style.transition = 'none';
-                copia.style.caretColor = 'transparent';
-            }
-
-            clon.style.width = `${anchoVisible}px`;
-            clon.style.maxWidth = 'none';
-            clon.style.height = 'auto';
-            clon.style.minHeight = '0';
-            clon.style.overflow = 'visible';
-            clon.style.background = '#FFFFFF';
-
-            clon.querySelectorAll('mjx-assistive-mml, .MJX_Assistive_MathML').forEach(el => el.remove());
             clon.querySelectorAll('mjx-container [aria-hidden="true"] math').forEach(el => el.remove());
 
-            clon.querySelectorAll('img, figure, table, tr, mjx-container').forEach(el => {
-                el.style.breakInside = 'avoid';
-                el.style.pageBreakInside = 'avoid';
-            });
+            printContainer = document.createElement('div');
+            printContainer.id = 'print-only-container';
+            printContainer.setAttribute('aria-hidden', 'true');
+            printContainer.appendChild(clon);
+            document.body.appendChild(printContainer);
 
-            contenedorTemporal = document.createElement('div');
-            contenedorTemporal.setAttribute('aria-hidden', 'true');
-            contenedorTemporal.style.position = 'fixed';
-            contenedorTemporal.style.left = '-100000px';
-            contenedorTemporal.style.top = '0';
-            contenedorTemporal.style.width = `${anchoVisible}px`;
-            contenedorTemporal.style.background = '#FFFFFF';
-            contenedorTemporal.style.zIndex = '-999999';
-            contenedorTemporal.appendChild(clon);
-            document.body.appendChild(contenedorTemporal);
-
-            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-            const opt = {
-                margin:       [0.38, 0.38, 0.38, 0.38],
-                filename:     nombreArchivo,
-                image:        { type: 'png', quality: 1 },
-                html2canvas:  {
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: false,
-                    backgroundColor: '#FFFFFF',
-                    logging: false,
-                    scrollX: 0,
-                    scrollY: 0,
-                    windowWidth: anchoVisible,
-                    ignoreElements: (node) => {
-                        if(!node || node.nodeType !== 1) return false;
-                        const tag = (node.tagName || '').toLowerCase();
-                        return tag === 'mjx-assistive-mml' ||
-                               node.classList?.contains('MJX_Assistive_MathML');
-                    }
-                },
-                pagebreak: {
-                    mode: ['css', 'legacy'],
-                    avoid: ['img', 'figure', 'table', 'tr', 'mjx-container']
-                },
-                jsPDF: {
-                    unit: 'in',
-                    format: 'letter',
-                    orientation: 'portrait',
-                    compress: true
+            printStyle = document.createElement('style');
+            printStyle.id = 'print-only-style';
+            printStyle.textContent = `
+                #print-only-container {
+                    display: none;
                 }
-            };
 
-            await html2pdf().set(opt).from(clon).save();
+                @media print {
+                    @page {
+                        size: letter portrait;
+                        margin: 15mm 16mm 15mm 16mm;
+                    }
+
+                    html, body {
+                        background: #fff !important;
+                        width: auto !important;
+                        height: auto !important;
+                        overflow: visible !important;
+                    }
+
+                    body > * {
+                        display: none !important;
+                    }
+
+                    #print-only-container {
+                        display: block !important;
+                        position: static !important;
+                        width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #fff !important;
+                        color: #111827 !important;
+                    }
+
+                    #print-only-resumen {
+                        display: block !important;
+                        width: 100% !important;
+                        max-width: none !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #fff !important;
+                        color: #111827 !important;
+                        box-shadow: none !important;
+                        border: 0 !important;
+                        overflow: visible !important;
+                    }
+
+                    #print-only-resumen *,
+                    #print-only-resumen *::before,
+                    #print-only-resumen *::after {
+                        animation: none !important;
+                        transition: none !important;
+                    }
+
+                    #print-only-resumen p,
+                    #print-only-resumen li,
+                    #print-only-resumen blockquote {
+                        orphans: 3;
+                        widows: 3;
+                    }
+
+                    #print-only-resumen h1,
+                    #print-only-resumen h2,
+                    #print-only-resumen h3,
+                    #print-only-resumen h4,
+                    #print-only-resumen h5,
+                    #print-only-resumen h6 {
+                        break-after: avoid-page;
+                        page-break-after: avoid;
+                    }
+
+                    #print-only-resumen img,
+                    #print-only-resumen figure,
+                    #print-only-resumen table,
+                    #print-only-resumen tr,
+                    #print-only-resumen mjx-container {
+                        break-inside: avoid-page;
+                        page-break-inside: avoid;
+                    }
+
+                    #print-only-resumen img {
+                        max-width: 100% !important;
+                        height: auto !important;
+                    }
+
+                    #print-only-resumen table {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                    }
+
+                    #print-only-resumen pre,
+                    #print-only-resumen code {
+                        white-space: pre-wrap !important;
+                        overflow-wrap: anywhere !important;
+                    }
+
+                    #print-only-resumen a {
+                        color: inherit !important;
+                        text-decoration: none !important;
+                    }
+                }
+            `;
+            document.head.appendChild(printStyle);
+
+            // El navegador genera el PDF mediante su motor de impresión nativo.
+            // En el cuadro de impresión el usuario elige "Guardar como PDF".
+            await new Promise(resolve => setTimeout(resolve, 80));
+            window.print();
         } catch(err) {
-            console.error("Error generando PDF:", err);
-            alert("No se pudo generar el PDF. Intenta nuevamente.");
+            console.error("Error preparando impresión del resumen:", err);
+            alert("No se pudo preparar el PDF. Intenta nuevamente.");
         } finally {
-            contenedorTemporal?.remove();
+            // Se limpia la copia temporal una vez cerrado el diálogo de impresión.
+            setTimeout(() => {
+                printContainer?.remove();
+                printStyle?.remove();
+            }, 500);
+
             if(boton) {
                 boton.disabled = false;
                 boton.innerHTML = textoBoton;
