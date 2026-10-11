@@ -1,0 +1,42 @@
+VALIDACIÓN · AULA VIRTUAL 593 · 11 de octubre de 2026
+
+RESULTADO: pruebas locales superadas con datos simulados.
+
+Comprobaciones ejecutadas en Chromium:
+- Carga del panel y edición de un tema existente.
+- Guardado de herramientas y reapertura con los mismos datos.
+- Conservación de un campo anterior no incluido en el formulario (merge).
+- Conversión de Markdown y conservación de delimitadores LaTeX.
+- Inserción de plantilla de laboratorio y archivo TXT.
+- Vista previa con tarjetas de herramientas.
+- Carga de herramientas en iframe aislado, con enlace alternativo.
+- Tema anterior sin herramientas: no aparece el recurso nuevo.
+- Búsqueda de temas con resultados y sin resultados.
+- Fallo de guardado simulado: conserva el contenido y permite reintentar.
+- Limpieza de scripts, atributos ejecutables y enlaces peligrosos.
+- Conservación de conceptos emergentes en el contenido limpio.
+- Vista de 390 px sin desbordamiento horizontal de la página.
+- Editor ampliado y salida con Escape.
+- Carga del organizador existente.
+- Sin errores JavaScript de página durante esas comprobaciones.
+
+Comprobaciones de archivos:
+- Sintaxis JavaScript verificada con Node en app.js y aula-studio.js.
+- Solo index.html y app.js cambian entre los archivos originales.
+- 16 archivos originales permanecen idénticos byte por byte, incluidos
+  simuladores, Workers, Profe IA, configuraciones, logo y PDF.
+- Se agregan aula-studio.js, aula-studio.css y dos documentos de ayuda.
+
+ALCANCE Y LÍMITES:
+Firebase fue sustituido por un doble de prueba en memoria, exclusivamente
+para estas comprobaciones. No se accedió ni se escribió en la base real.
+El código entregado mantiene las importaciones originales de Firebase.
+No se probaron autenticación real, permisos de producción, proveedores IA
+ni el despliegue en Cloudflare. MathJax y otros recursos externos se
+sustituyeron en las pruebas: se comprobó conservar el LaTeX, no la apariencia
+final de sus ecuaciones renderizadas. La app de configuración electrónica
+no estaba en el ZIP y no se probó su integración específica.
+
+La compatibilidad de cada aplicación integrada depende de su servidor y
+sus requisitos de inicio de sesión/almacenamiento. El enlace para abrirla
+en otra pestaña siempre está disponible.

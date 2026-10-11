@@ -16,7 +16,6 @@
         }
       };
     </script>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     
     <!-- FontAwesome para Iconos -->
@@ -1230,6 +1229,7 @@
         }
 
     </style>
+<link rel="stylesheet" href="./aula-studio.css?v=20261011">
 </head>
 <body>
 
@@ -1428,8 +1428,10 @@
                 <button class="btn-recurso" onclick="mostrarRecurso('acc-evaluacion', 'Ejercicios para prácticas')">
                     <i class="fas fa-list-check"></i> <span>4. Ejercicios para prácticas</span>
                 </button>
+                <button id="studio-tools-menu" class="btn-recurso hidden" onclick="mostrarRecurso('acc-herramientas', 'Herramientas interactivas')"><i class="fas fa-flask"></i><span>5. Herramientas interactivas</span></button>
             </div>
 
+            <div id="acc-herramientas" class="recurso-content hidden"><div id="studio-student-tools"></div></div>
             <!-- CONTENIDO: TEXTOS -->
             <div id="acc-textos" class="recurso-content hidden">
                 <div class="instruction-card" style="margin-top: 0; border: none; box-shadow: none; padding: 0;">
@@ -1495,15 +1497,15 @@
         <!-- 6. VISTA: ADMINISTRACIÓN -->
         <section id="view-admin" class="content-container hidden">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="margin: 0; color: var(--primary);"><i class="fas fa-shield-alt" style="color: var(--danger);"></i> Control Total del Aula</h2>
+                <h2 style="margin: 0; color: var(--primary);"><i class="fas fa-shield-alt" style="color: var(--danger);"></i> Estudio del aula</h2>
                 <button class="btn-outline" onclick="mostrarVista('view-inicio')"><i class="fas fa-eye"></i> Vista Alumno</button>
             </div>
 
             <div class="admin-help-banner">
                 <i class="fas fa-wand-magic-sparkles"></i>
                 <div>
-                    <strong>Administración más sencilla</strong>
-                    <p>Crea materias, módulos y temas normalmente. El nuevo contenido se coloca automáticamente al final. Para cambiar el orden, usa las flechas de cada lista o la pestaña <b>Organizar estructura</b>; no necesitas calcular ni escribir números de orden.</p>
+                    <strong>Diseña una clase, paso a paso</strong>
+                    <p>Organiza tu contenido, prepara los textos y añade herramientas interactivas. Publica cada tema cuando esté listo; conserva el orden de tus materias y módulos.</p>
                 </div>
             </div>
 
@@ -1515,7 +1517,8 @@
                 <button class="tab-btn" onclick="switchAdminTab('alumnos')"><i class="fas fa-users"></i> Alumnos Permitidos</button>
             </div>
 
-            <!-- Tab: Materias -->
+            <div id="studio-stats" class="studio-stats" aria-label="Resumen del aula"></div>
+<!-- Tab: Materias -->
             <div id="admin-tab-materias" class="tab-content">
                 <div class="instruction-card" style="margin-top: 0;">
                     <h3>Crear Materia</h3>
@@ -1561,7 +1564,7 @@
             <!-- Tab: Temas -->
             <div id="admin-tab-temas" class="tab-content hidden">
                 <div class="instruction-card" style="margin-top: 0;">
-                    <h3>Crear Nuevo Tema</h3>
+                    <div class="studio-eyebrow">ESPACIO DE CREACIÓN</div><h3 id="studio-editor-title">Prepara tu próximo tema</h3>
                     <p style="margin:-4px 0 16px;color:var(--text-light);font-size:12px;line-height:1.5;">Selecciona materia y módulo. El tema nuevo se añadirá al final y podrás moverlo después sin escribir números.</p>
                     <div class="input-group">
                         <label>1. Materia</label>
@@ -1583,7 +1586,14 @@
                             Editor visual: da formato, inserta enlaces, imágenes, fórmulas, conceptos y tablas sin escribir código.
                         </div>
 
-                        <div class="rich-editor-wrap">
+                        <div class="studio-quickbar">
+<button type="button" class="btn-outline" id="studio-import">Importar texto</button>
+<input type="file" id="studio-file" accept=".txt,.md,.markdown,.html,.htm" hidden>
+<button type="button" class="btn-outline" id="studio-paste">Pegar y dar formato</button>
+<button type="button" class="btn-outline" id="studio-template">Plantilla de clase</button>
+<button type="button" class="btn-outline" id="studio-focus">Ampliar editor</button>
+</div><p class="studio-hint">Pega desde Word conservando títulos, listas y tablas. También puedes importar TXT, Markdown o HTML. Las fórmulas LaTeX se mantienen como texto editable.</p>
+<div class="rich-editor-wrap">
                             <div class="editor-toolbar" aria-label="Herramientas de formato">
                                 <div class="editor-group">
                                     <select id="editor-formato" title="Tipo de texto" onchange="editorAplicarBloque(this.value); this.value='p';">
@@ -1635,7 +1645,7 @@
                                 <button type="button" class="btn-outline" onclick="toggleEditorPreview()"><i class="fas fa-eye"></i> Vista previa</button>
                             </div>
                         </div>
-                        <div id="admin-editor-preview" class="editor-preview hidden"></div>
+                        <div class="studio-editor-meta"><span id="studio-word-count">0 palabras</span><span id="studio-dirty" role="status">Sin cambios pendientes</span></div><div id="admin-editor-preview" class="editor-preview hidden"></div>
                     </div>
                     <div class="input-group">
                         <label>Lecturas Recomendadas (Un enlace por línea: Título http...)</label>
@@ -1660,6 +1670,12 @@
                             Sube el PDF a <b>imagenes/</b> en GitHub y escribe aquí únicamente el nombre del archivo.
                         </div>
                     </div>
+                    <section class="studio-tools-admin" aria-labelledby="studio-tools-heading">
+<div class="studio-eyebrow">APRENDER HACIENDO</div><h3 id="studio-tools-heading">Herramientas del tema</h3>
+<p class="studio-hint">Vincula tu app de configuración electrónica, un laboratorio o cualquier recurso interactivo. No necesitas escribir código.</p>
+<div id="studio-tool-list"></div>
+<button type="button" class="btn-outline" id="studio-add-tool">＋ Añadir herramienta</button>
+</section>
                     <div class="admin-save-row">
                         <button id="btn-admin-guardar-tema" class="btn-success">
                             <i class="fas fa-save"></i> Publicar Tema
@@ -1673,7 +1689,7 @@
                 <div class="instruction-card">
                     <h3>Temas Publicados</h3>
                     <p style="margin:-4px 0 14px;color:var(--text-light);font-size:12px;">Puedes editar un tema o cambiar su posición dentro del módulo con las flechas.</p>
-                    <div id="admin-lista-temas">Cargando...</div>
+                    <label for="studio-search">Buscar por tema, materia o módulo</label><input id="studio-search" type="search" class="input-text" placeholder="Ej.: configuración electrónica"><p id="studio-search-status" class="studio-hint" role="status"></p><div id="admin-lista-temas">Cargando...</div>
                 </div>
             </div>
 
@@ -1758,6 +1774,7 @@
     </div>
 </div>
 
-<script type="module" src="./app.js"></script>
+<script src="./aula-studio.js?v=20261011"></script>
+<script type="module" src="./app.js?v=20261011"></script>
 </body>
 </html>

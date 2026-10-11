@@ -430,11 +430,17 @@ function guardarSeleccionEditor() {
 function restaurarSeleccionEditor() {
     const editor = getRichEditor();
     if(!editor) return;
+    const previousRange = editorSavedRange;
     editor.focus();
-    if(editorSavedRange) {
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(editorSavedRange);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    if(previousRange && editor.contains(previousRange.commonAncestorContainer)) {
+        sel.addRange(previousRange);
+    } else {
+        const endRange = document.createRange();
+        endRange.selectNodeContents(editor);
+        endRange.collapse(false);
+        sel.addRange(endRange);
     }
 }
 
@@ -546,7 +552,8 @@ window.toggleEditorPreview = function() {
     const editor = getRichEditor();
     if(!preview || !editor) return;
     if(preview.classList.contains('hidden')) {
-        preview.innerHTML = editor.innerHTML || '<p style="color:#64748B">La vista previa está vacía.</p>';
+        preview.innerHTML = window.AulaStudio.cleanHTML(editor.innerHTML) || '<p>La vista previa está vacía.</p>';
+        window.AulaStudio.previewTools(preview);
         preview.classList.remove('hidden');
         if(window.MathJax) MathJax.typesetPromise([preview]).catch(() => {});
     } else {
@@ -555,7 +562,9 @@ window.toggleEditorPreview = function() {
 };
 
 function limpiarFormularioTemaAdmin() {
+    window.AulaStudio?.loadTools([]);
     temaEditandoId = null;
+    document.getElementById('studio-editor-title').textContent = 'Prepara tu próximo tema';
     document.getElementById('admin-tema-titulo').value = '';
     document.getElementById('admin-tema-lecturas').value = '';
     document.getElementById('admin-tema-videos').value = '';
@@ -564,6 +573,7 @@ function limpiarFormularioTemaAdmin() {
     document.getElementById('admin-tema-pdf').value = '';
     const editor = getRichEditor();
     if(editor) editor.innerHTML = '';
+    window.AulaStudio?.markClean();
     editorSavedRange = null;
     syncEditorToTextarea();
     document.getElementById('admin-editor-preview')?.classList.add('hidden');
@@ -591,11 +601,13 @@ async function cargarModulosAdmin(materiaId, moduloSeleccionadoId = '') {
 }
 
 window.editarTema = async function(id) {
+    if(!window.AulaStudio?.canDiscard()) return;
     try {
         const snap = await getDoc(doc(db, 'temas_globales', id));
         if(!snap.exists()) return alert('No se encontró el tema.');
         const data = snap.data();
         temaEditandoId = id;
+        document.getElementById('studio-editor-title').textContent = 'Editar tema';
         window.switchAdminTab('temas');
 
         document.getElementById('admin-tema-materia').value = data.materia_id || '';
@@ -610,7 +622,10 @@ window.editarTema = async function(id) {
         const editor = getRichEditor();
         const contenido = data.resumen_teorico || '';
         const pareceHTML = /<\/?[a-z][\s\S]*>/i.test(contenido);
-        editor.innerHTML = pareceHTML ? contenido : (typeof marked !== 'undefined' ? marked.parse(contenido) : escapeHTML(contenido).replace(/\n/g, '<br>'));
+        editor.innerHTML = window.AulaStudio.cleanHTML(pareceHTML ? contenido : window.AulaStudio.markdown(contenido));
+        editorSavedRange = null;
+        window.AulaStudio.loadTools(data.herramientas_interactivas || []);
+        window.AulaStudio.markClean();
         syncEditorToTextarea();
 
         const btnGuardar = document.getElementById('btn-admin-guardar-tema');
@@ -624,6 +639,7 @@ window.editarTema = async function(id) {
 };
 
 window.cancelarEdicionTema = function() {
+    if(!window.AulaStudio?.canDiscard()) return;
     limpiarFormularioTemaAdmin();
     document.getElementById('admin-status').innerHTML = '';
 };
@@ -765,6 +781,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-admin-guardar-tema')?.addEventListener('click', async () => {
+        const saveButton = document.getElementById('btn-admin-guardar-tema');
+        if(saveButton.disabled) return;
         const materia_id = document.getElementById('admin-tema-materia').value;
         const modulo_id = document.getElementById('admin-tema-modulo').value;
         const titulo = document.getElementById('admin-tema-titulo').value.trim();
@@ -780,6 +798,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!materia_id || !modulo_id || !titulo) return alert("Selecciona materia, módulo e ingresa el título del tema.");
         if(!resumen_teorico) return alert("Escribe el resumen o contenido del tema en el editor visual.");
 
+        let herramientas_interactivas;
+        try { herramientas_interactivas = window.AulaStudio.readTools(); } catch(e) { alert(e.message); return; }
+        saveButton.disabled = true;
+        window.AulaStudio.setSaving(true);
         status.style.color = "var(--primary-light)";
         status.innerHTML = "<i class='fas fa-spinner fa-spin'></i> Guardando tema...";
 
@@ -796,7 +818,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const payload = {
                 materia_id, modulo_id, titulo,
-                resumen_teorico,
+                resumen_teorico: window.AulaStudio.cleanHTML(resumen_teorico),
+                herramientas_interactivas,
                 lecturas_recomendadas: parseLinks(lecturasRaw),
                 videos_recomendados: parseSimpleList(videosRaw),
                 imagenes: parseSimpleList(imagenesRaw),
@@ -824,6 +847,8 @@ document.addEventListener('DOMContentLoaded', () => {
             status.style.color = "var(--danger)";
             status.innerHTML = "❌ Error: " + e.message;
         } finally {
+            saveButton.disabled = false;
+            window.AulaStudio.setSaving(false);
             setTimeout(() => {
                 if(!temaEditandoId && status.textContent.includes('éxito')) status.innerHTML = "";
             }, 5000);
@@ -1285,7 +1310,8 @@ window.abrirTema = async function(temaId, matId, matNombre, modNombre) {
 
         const resBox = document.getElementById('tema-resumen');
         if (resBox) {
-            resBox.innerHTML = typeof marked !== 'undefined' ? marked.parse(data.resumen_teorico || "") : data.resumen_teorico;
+            const raw = data.resumen_teorico || '';
+            resBox.innerHTML = window.AulaStudio.cleanHTML(/<\/?[a-z][\s\S]*>/i.test(raw) ? raw : window.AulaStudio.markdown(raw));
             if(window.MathJax?.typesetPromise) {
                 // Renderiza las fórmulas UNA sola vez al cargar el tema y espera a que
                 // terminen antes de mostrar la vista. Así el PDF solo captura la salida final.
@@ -1343,6 +1369,7 @@ window.abrirTema = async function(temaId, matId, matNombre, modNombre) {
             }
         }
 
+        window.AulaStudio.renderTools(data.herramientas_interactivas || []);
         cargarSimuladoresGuardados();
         mostrarVista('view-tema');
 
@@ -1548,6 +1575,8 @@ async function cargarDatosAdmin() {
     const selMatMod = document.getElementById('admin-select-materia-modulo');
     const selMatTem = document.getElementById('admin-tema-materia');
 
+    const previousMateria = selMatTem.value;
+    const previousMateriaModulo = selMatMod.value;
     const materias = ordenarPorOrden(snapMat.docs.map(d => ({ id:d.id, ...d.data() })), 'nombre');
     const modulos = snapMod.docs.map(d => ({ id:d.id, ...d.data() }));
     const temas = snapTem.docs.map(d => ({ id:d.id, ...d.data() }));
@@ -1562,6 +1591,8 @@ async function cargarDatosAdmin() {
         const opcionesHTML = `<option value="">-- Selecciona una Materia --</option>` + materias.map(m => `<option value="${m.id}">${escapeHTML(m.nombre)}</option>`).join('');
         selMatMod.innerHTML = opcionesHTML;
         selMatTem.innerHTML = opcionesHTML;
+        selMatTem.value = previousMateria;
+        selMatMod.value = previousMateriaModulo;
         contMat.innerHTML = materias.map((data, index) => `
             <div class="admin-list-row admin-ordered-row">
                 <div class="admin-order-badge">${index + 1}</div>
@@ -1653,6 +1684,7 @@ async function cargarDatosAdmin() {
         }).join('');
     }
 
+    window.AulaStudio.refreshAdmin(materias.length, modulos.length, temas.length, snapAlu.size);
     // Si el organizador está visible, mantenlo sincronizado.
     if(!document.getElementById('admin-tab-organizar')?.classList.contains('hidden')) cargarOrganizador();
 }
