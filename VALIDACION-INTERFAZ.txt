@@ -61,3 +61,12 @@ CORRECCIÓN DE CARGA DEL EDITOR
 - Repetidas las pruebas de edición/guardado simulados con el código integrado.
 - El sitio real del usuario no se inspeccionó; no se confirma que la carga
   tardía fuese la causa concreta de su despliegue.
+
+ACTUALIZACIÓN · ACCESO Y GESTIÓN DOCENTE · 11/octubre/2026
+- Revisión visual Chromium: 1440 × 900, 1024 × 768, 390 × 844.
+- Inicio de sesión con formulario existente, estilo corporativo y visual compacto en móvil.
+- Editor ampliado: se verificó requestFullscreen(), Reducción, ventana de plantillas, cero errores JS en esta simulación.
+- Administrador: prueba guardada y evaluación final cargadas desde Firebase falso.
+- Reinicio de toda la cuenta del docente: 3 documentos borrados bajo ese UID; documento de alumno simulado conservado.
+- Sintaxis: comprobada con node --check en app.js, simuladores.js y aula-studio.js.
+- Pendiente de verificar en producción: permisos reales de Firestore, proveedores Firebase e IA y despliegue. No se realizaron escrituras sobre datos reales.

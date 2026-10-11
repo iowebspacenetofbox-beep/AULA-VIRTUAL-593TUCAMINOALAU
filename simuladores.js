@@ -31,6 +31,8 @@ const newBtn = document.getElementById("new-btn");
 let temaActual = null;
 let usuarioActual = null;
 let preguntas = [];
+let guardadoPendiente = null;
+let guardando = false;
 
 function setStatus(message, type = "") {
   statusBox.textContent = message;
@@ -255,51 +257,69 @@ async function calificar() {
   await typeset(quizBox);
   resultBox.scrollIntoView({ behavior:"smooth", block:"center" });
 
-  try {
-    // Guarda el intento y marca el tema como completado en una sola operación atómica.
-    // Si una de las dos escrituras falla, no se guarda ninguna a medias.
-    const batch = writeBatch(db);
-
-    const intentoRef = doc(collection(db, "usuarios", usuarioActual.uid, "simuladores_guardados"));
-    batch.set(intentoRef, {
-      tema_id: temaId,
-      materia_id: materiaId,
+  // Se genera UNA sola referencia y se conserva en caso de error.
+  // Un reintento no vuelve a calificar ni crea prácticas duplicadas.
+  const intentoRef = doc(collection(db, "usuarios", usuarioActual.uid, "simuladores_guardados"));
+  guardadoPendiente = {
+    usuarioUid: usuarioActual.uid, referencia: intentoRef,
+    fecha,
+    datos: {
+      tema_id: temaId, materia_id: materiaId,
       tema_titulo: temaActual?.titulo || "Tema",
       materia_nombre: temaActual?.materia || "Materia",
       modulo_nombre: temaActual?.modulo || "Módulo",
-      dificultad,
-      puntaje: aciertos,
-      total,
-      porcentaje,
-      respuestas,
+      dificultad, puntaje: aciertos, total, porcentaje, respuestas,
       preguntas: preguntas.map((p, i) => ({
         enunciado: String(p.enunciado || ""),
         opciones: Array.isArray(p.opciones) ? p.opciones.map(op => String(op)) : [],
         respuesta_correcta: Number(p.respuesta_correcta),
         respuesta_usuario: respuestas[i],
         explicacion: String(p.explicacion || "")
-      })),
-      fecha
-    });
-
-    const progresoRef = doc(db, "usuarios", usuarioActual.uid, "progreso_temas", temaId);
-    batch.set(progresoRef, {
-      status: "green",
-      timestamp: fecha,
-      ultimo_simulador_id: intentoRef.id,
-      ultimo_puntaje: aciertos,
-      ultimo_total: total
-    }, { merge: true });
-
-    await batch.commit();
-
-    scoreText.textContent += " Tu práctica quedó guardada y este tema fue marcado como completado.";
-  } catch (err) {
-    console.error("No se pudo guardar la práctica:", err);
-    scoreText.textContent += " La práctica se calificó, pero no se pudo guardar. Vuelve a intentarlo antes de cerrar esta página.";
-    if (gradeBtn) gradeBtn.disabled = false;
-  }
+      })), fecha
+    }
+  };
+  await intentarGuardarCalificacion();
 }
+
+async function intentarGuardarCalificacion() {
+  if(!guardadoPendiente || guardando) return;
+  guardando = true;
+  const retry = document.getElementById('retry-save-btn');
+  if(retry) { retry.disabled = true; retry.textContent = 'Guardando…'; }
+  try {
+    const {usuarioUid, referencia, fecha, datos} = guardadoPendiente;
+    const batch = writeBatch(db);
+    batch.set(referencia, datos);
+    batch.set(doc(db, "usuarios", usuarioUid, "progreso_temas", temaId), {
+      status: "green", timestamp: fecha,
+      ultimo_simulador_id: referencia.id,
+      ultimo_puntaje: datos.puntaje,
+      ultimo_total: datos.total
+    }, { merge: true });
+    await batch.commit();
+    guardadoPendiente = null;
+    document.getElementById('retry-save-btn')?.remove();
+    scoreText.textContent = `${datos.porcentaje}% de aciertos. Tu práctica quedó guardada correctamente en Firebase y el tema fue marcado como completado.`;
+  } catch(err) {
+    console.error('No se pudo guardar la práctica en Firebase:', err);
+    const detalle = err?.code === 'permission-denied'
+      ? 'Firestore rechazó la escritura por permisos. Tu cuenta debe tener acceso a usuarios/{uid}/simuladores_guardados y progreso_temas. Pide revisar las reglas; no las abras al público.'
+      : `Firebase no confirmó el guardado (${err?.message || 'error de conexión'}).`;
+    scoreText.textContent = `Obtuviste ${guardadoPendiente.datos.puntaje}/${guardadoPendiente.datos.total}. ${detalle} Tu resultado sigue en esta página; pulsa Reintentar guardado antes de salir.`;
+    if(!document.getElementById('retry-save-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'retry-save-btn'; btn.className='primary'; btn.type='button';
+      btn.textContent = 'Reintentar guardado';
+      btn.addEventListener('click', intentarGuardarCalificacion);
+      resultBox.append(btn);
+    }
+    const btn=document.getElementById('retry-save-btn');
+    btn.disabled=false;btn.textContent='Reintentar guardado';
+  } finally { guardando=false; }
+}
+window.addEventListener('beforeunload',event=>{
+  if(guardadoPendiente){event.preventDefault();event.returnValue='';}
+});
 
 newBtn.addEventListener("click", generarPractica);
 generateBtn.addEventListener("click", generarPractica);

@@ -162,10 +162,27 @@ function initializeStudio(){
  $('studio-paste').onclick=()=>dialog('Pegar y dar formato',`<p>Pega texto o Markdown: los encabezados con #, las listas y las tablas se convertirán en contenido editable. Se añade a tu texto actual.</p><label>Texto<textarea data-text rows="12" placeholder="# Título del tema&#10;&#10;## Conceptos clave&#10;- Primer concepto"></textarea></label>`,'Insertar con formato',d=>{const text=d.querySelector('[data-text]').value;if(!text.trim())throw new Error('Pega primero un texto.');return markdown(text);});
  $('studio-template').onclick=()=>dialog('Una base para tu clase',`<p>Se añade al contenido existente. Puedes cambiar todos los apartados.</p><label>Tipo de clase<select data-template><option value="teoria">Teoría y práctica</option><option value="laboratorio">Laboratorio guiado</option><option value="lectura">Lectura y análisis</option></select></label>`,'Insertar plantilla',d=>{
  const templates={teoria:'<h2>Objetivo de aprendizaje</h2><p>Al finalizar, podrás…</p><h2>Conceptos clave</h2><p>Explica aquí las ideas principales.</p><h3>Ejemplo resuelto</h3><p>Desarrolla el procedimiento paso a paso.</p><blockquote>Recuerda: escribe aquí una idea esencial.</blockquote><h2>Ahora practica</h2><ol><li>Describe el problema.</li><li>Aplica lo aprendido.</li></ol>',laboratorio:'<h2>Pregunta de investigación</h2><p>¿Qué vamos a comprobar?</p><h2>Materiales</h2><ul><li>Material necesario</li></ul><h2>Procedimiento</h2><ol><li>Preparación</li><li>Observación</li><li>Registro de resultados</li></ol><h2>Resultados y conclusiones</h2><p>Compara lo observado con tu hipótesis.</p>',lectura:'<h2>Antes de leer</h2><p>Activa tus conocimientos previos.</p><h2>Texto de estudio</h2><p>Introduce aquí la lectura.</p><h2>Preguntas de análisis</h2><ol><li>¿Cuál es la idea principal?</li><li>¿Qué evidencia la respalda?</li></ol><h2>Síntesis</h2><p>Resume lo aprendido con tus palabras.</p>'};return templates[d.querySelector('[data-template]').value];});
- function focusOff(){document.body.classList.remove('studio-focus');$('studio-focus').textContent='Ampliar editor';}
- $('studio-focus').onclick=()=>{const active=document.body.classList.toggle('studio-focus');$('studio-focus').textContent=active?'Salir de vista ampliada':'Ampliar editor';};
- document.addEventListener('keydown',e=>{if(e.key==='Escape')focusOff();});
+ const panel=$('admin-tab-temas').querySelector('.instruction-card');
+ function isFocused(){return document.fullscreenElement===panel || document.body.classList.contains('studio-focus');}
+ function updateFocusButton(){const focused=isFocused();$('studio-focus').textContent=focused?'Reducir editor':'Ampliar editor';$('studio-focus').setAttribute('aria-pressed',String(focused));}
+ function focusOff(){
+  document.body.classList.remove('studio-focus');
+  if(document.fullscreenElement===panel && document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+  updateFocusButton();
+ }
+ $('studio-focus').onclick=async()=>{
+  if(isFocused()){focusOff();return;}
+  // Pantalla completa real: deja visible el formulario y el botón Guardar.
+  // En navegadores que no la admiten, usar vista fija equivalente.
+  if(panel.requestFullscreen){
+   try {await panel.requestFullscreen();}catch(_){document.body.classList.add('studio-focus');}
+  }else document.body.classList.add('studio-focus');
+  updateFocusButton();
+ };
+ document.addEventListener('fullscreenchange',updateFocusButton);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape' && document.body.classList.contains('studio-focus'))focusOff();});
  new MutationObserver(()=>{if($('view-admin').classList.contains('hidden')||$('admin-tab-temas').classList.contains('hidden'))focusOff();}).observe($('view-admin'),{attributes:true,subtree:true,attributeFilter:['class']});
+ updateFocusButton();
  window.addEventListener('beforeunload',e=>{if(dirty()){e.preventDefault();e.returnValue='';}});
  document.querySelectorAll('.editor-actions button').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
  markClean();

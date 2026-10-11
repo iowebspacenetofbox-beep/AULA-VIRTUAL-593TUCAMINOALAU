@@ -3,7 +3,7 @@ import {
     getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, onAuthStateChanged, signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { 
-    getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where 
+    getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, addDoc, query, where, writeBatch 
 } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // ==========================================
@@ -372,6 +372,7 @@ window.switchAdminTab = function(tabName) {
     if(tabName === 'temas') btns[2].classList.add('active');
     if(tabName === 'organizar') { btns[3].classList.add('active'); cargarOrganizador(); }
     if(tabName === 'alumnos') btns[4].classList.add('active');
+    if(tabName === 'mis-pruebas') { btns[5].classList.add('active'); window.verMisPruebas(); }
 }
 
 // ==========================================
@@ -688,14 +689,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // Login
-    document.getElementById('btn-login-email')?.addEventListener('click', async () => {
+    document.getElementById('form-login-email')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
         const email = document.getElementById('login-email').value.trim().toLowerCase();
         const pass = document.getElementById('login-password').value;
         const errBox = document.getElementById('login-error');
         errBox.classList.add('hidden');
         if(!email || !pass) { errBox.textContent = "Ingresa tu correo y contraseña."; errBox.classList.remove('hidden'); return; }
-        try { await signInWithEmailAndPassword(auth, email, pass); } 
-        catch(e) { errBox.textContent = "Error al iniciar sesión: Verifique sus credenciales."; errBox.classList.remove('hidden'); }
+        const boton = document.getElementById('btn-login-email');
+        if(boton.disabled) return;
+        boton.disabled = true;
+        try { await signInWithEmailAndPassword(auth, email, pass); }
+        catch(e) { errBox.textContent = "No se pudo iniciar sesión. Revisa el correo y la contraseña."; errBox.classList.remove('hidden'); }
+        finally { boton.disabled = false; }
     });
 
     document.getElementById('btn-login-google')?.addEventListener('click', () => {
@@ -886,37 +892,89 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-enviar-quiz')?.addEventListener('click', async () => {
+        if(!usuarioActual?.uid || !temaActualInfo?.id || !Array.isArray(quizActivo) || !quizActivo.length) {
+            alert('Debes iniciar sesión y cargar una prueba válida antes de enviarla.');
+            return;
+        }
+        const respuestas = [];
         let puntaje = 0;
         quizActivo.forEach((p, index) => {
             const sel = document.querySelector(`input[name="q${index}"]:checked`);
+            const respuesta = sel ? Number(sel.value) : null;
+            respuestas.push(respuesta);
             const divExp = document.getElementById(`exp-q${index}`);
             if(divExp) divExp.classList.remove('hidden');
-            if(sel && parseInt(sel.value) === p.respuesta_correcta) puntaje++;
+            if(respuesta === p.respuesta_correcta) puntaje++;
         });
-
         const resDiv = document.getElementById('quiz-resultado');
-        resDiv.innerHTML = `<h3>Puntaje Obtenido</h3><p style="font-size: 36px; font-weight: 800; color: var(--primary-light); margin:0;">${puntaje} / ${quizActivo.length}</p>`;
+        resDiv.innerHTML = `<h3>Puntaje Obtenido</h3><p style="font-size: 36px; font-weight: 800; color: var(--primary-light); margin:0;">${puntaje} / ${quizActivo.length}</p><p id="quiz-guardado-estado" role="status">Guardando en Firebase…</p>`;
         resDiv.classList.remove('hidden');
         document.getElementById('btn-enviar-quiz').classList.add('hidden');
 
-        await setDoc(doc(db, "usuarios", usuarioActual.uid, "progreso_temas", temaActualInfo.id), {
-            status: "green", timestamp: new Date().toISOString()
-        }, { merge: true });
-
-        // Deja preparada una animación de avance para cuando el estudiante vuelva al módulo.
-        if(moduloSeleccionado?.id && temaActualInfo?.id) {
-            sessionStorage.setItem('pendingTrackAnimation', JSON.stringify({
-                uid: usuarioActual.uid,
-                moduleId: moduloSeleccionado.id,
-                topicId: temaActualInfo.id,
-                timestamp: Date.now()
-            }));
+        const fecha = new Date().toISOString();
+        // Igual que simuladores.js: un intento guardado y un progreso coherente.
+        const intentoRef = doc(collection(db, 'usuarios', usuarioActual.uid, 'simuladores_guardados'));
+        const usuario = usuarioActual;
+        const tema = {...temaActualInfo};
+        const datosIntento = {
+            tema_id: tema.id,
+            materia_id: materiaSeleccionada?.id || tema.materia_id || '',
+            tema_titulo: tema.titulo || 'Tema',
+            modulo_nombre: moduloSeleccionado?.nombre || '',
+            dificultad: 'evaluacion_aula', origen: 'evaluacion_aula',
+            puntaje, total: quizActivo.length, porcentaje: Math.round(puntaje*100/quizActivo.length),
+            respuestas,
+            preguntas: quizActivo.map((p,i) => ({
+                enunciado: String(p.enunciado || p.pregunta || ''),
+                opciones: Array.isArray(p.opciones) ? p.opciones.map(x=>String(x)) : [],
+                respuesta_correcta: Number(p.respuesta_correcta),
+                respuesta_usuario: respuestas[i], explicacion: String(p.explicacion || '')
+            })), fecha
+        };
+        let notificacionEnviada = false;
+        async function guardarEvaluacionAula() {
+            const estado = document.getElementById('quiz-guardado-estado');
+            const btnReintentar = document.getElementById('quiz-reintentar-guardado');
+            if(btnReintentar) btnReintentar.disabled = true;
+            if(estado) estado.textContent = 'Guardando tu resultado…';
+            try {
+                const lote = writeBatch(db);
+                lote.set(intentoRef, datosIntento);
+                lote.set(doc(db, 'usuarios', usuario.uid, 'progreso_temas', tema.id), {
+                    status: 'green', timestamp: fecha, ultimo_simulador_id: intentoRef.id,
+                    ultimo_puntaje: puntaje, ultimo_total: quizActivo.length
+                }, {merge:true});
+                await lote.commit();
+                document.getElementById('quiz-reintentar-guardado')?.remove();
+                if(estado) estado.textContent = 'Resultado guardado correctamente en tu cuenta.';
+                if(moduloSeleccionado?.id) {
+                    sessionStorage.setItem('pendingTrackAnimation', JSON.stringify({
+                        uid: usuario.uid, moduleId: moduloSeleccionado.id,
+                        topicId: tema.id, timestamp: Date.now()
+                    }));
+                }
+                if(!notificacionEnviada) {
+                    notificacionEnviada = true;
+                    fetch(`https://formsubmit.co/ajax/${CORREO_FORMSUBMIT}`, {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({_subject:`Evaluación Completada - ${usuario.email}`, usuario:usuario.email,
+                            tema:tema.titulo, resultado:`${puntaje}/${quizActivo.length}`})
+                    }).catch(()=>{});
+                }
+            } catch(error) {
+                console.error('No se pudo registrar la prueba del aula:',error);
+                if(estado) estado.textContent = 'No se pudo guardar: '+explicarErrorFirebase(error)+' El puntaje se muestra, pero aún no está registrado.';
+                if(!document.getElementById('quiz-reintentar-guardado')) {
+                    const button = document.createElement('button');
+                    button.id='quiz-reintentar-guardado'; button.className='btn-primary';button.type='button';
+                    button.textContent='Reintentar guardado';
+                    button.addEventListener('click',guardarEvaluacionAula);
+                    resDiv.append(button);
+                }
+                document.getElementById('quiz-reintentar-guardado').disabled=false;
+            }
         }
-
-        fetch(`https://formsubmit.co/ajax/${CORREO_FORMSUBMIT}`, {
-            method: "POST", headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ _subject: `Evaluación Completada - ${usuarioActual.email}`, usuario: usuarioActual.email, tema: temaActualInfo.titulo, resultado: `${puntaje}/${quizActivo.length}` })
-        }).catch(() => {});
+        await guardarEvaluacionAula();
     });
 
 });
@@ -927,7 +985,7 @@ document.addEventListener('DOMContentLoaded', () => {
 onAuthStateChanged(auth, async (user) => {
     if(user) {
         const esAdmin = user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-        let nombreVisible = "593 TucaminoalaU";
+        let nombreVisible = esAdmin ? String(user.displayName || 'Administrador').trim() : 'Estudiante';
 
         if(!esAdmin) {
             const authSnap = await getDoc(doc(db, "alumnos_autorizados", user.email.toLowerCase()));
@@ -1689,9 +1747,11 @@ async function cargarDatosAdmin() {
     if(!document.getElementById('admin-tab-organizar')?.classList.contains('hidden')) cargarOrganizador();
 }
 
-window.verPruebasAlumno = async function(uidCodificado, emailCodificado, nombreCodificado) {
-    const cont = document.getElementById('admin-lista-pruebas-alumno');
-    if(!cont) return;
+window.verPruebasAlumno = async function(uidCodificado, emailCodificado, nombreCodificado, destino = 'admin-lista-pruebas-alumno') {
+    // No admitir un destino arbitrario ni mezclar datos del docente con los alumnos.
+    if(!['admin-lista-pruebas-alumno', 'admin-lista-mis-pruebas'].includes(destino)) return;
+    const cont = document.getElementById(destino);
+    if(!cont || !esAdministradorActual()) return;
 
     const uid = decodeURIComponent(uidCodificado || '');
     const email = decodeURIComponent(emailCodificado || '');
@@ -1739,7 +1799,7 @@ window.verPruebasAlumno = async function(uidCodificado, emailCodificado, nombreC
                         <small>${escapeHTML(fechaTxt)} · Resultado ${escapeHTML(puntaje)}</small>
                     </div>
                     <button class="btn-danger admin-mini-btn"
-                        onclick="eliminarPruebaAlumno('${encodeURIComponent(uid)}','${encodeURIComponent(data.id)}','${encodeURIComponent(data.tema_id || '')}','${encodeURIComponent(nombre || email)}')"
+                        onclick="eliminarPruebaAlumno('${encodeURIComponent(uid)}','${encodeURIComponent(data.id)}','${encodeURIComponent(data.tema_id || '')}','${encodeURIComponent(nombre || email)}','${destino}')"
                         title="Eliminar práctica y devolver el tema a En progreso">
                         <i class="fas fa-trash"></i> Dar de baja práctica
                     </button>
@@ -1759,7 +1819,7 @@ window.verPruebasAlumno = async function(uidCodificado, emailCodificado, nombreC
                         <small>${escapeHTML(fechaTxt)}</small>
                     </div>
                     <button class="btn-outline admin-mini-btn"
-                        onclick="desmarcarEvaluacionModulo('${encodeURIComponent(uid)}','${encodeURIComponent(data.id)}','${encodeURIComponent(nombre || email)}','${encodeURIComponent(email)}')"
+                        onclick="desmarcarEvaluacionModulo('${encodeURIComponent(uid)}','${encodeURIComponent(data.id)}','${encodeURIComponent(nombre || email)}','${encodeURIComponent(email)}','${destino}')"
                         title="Desmarcar evaluación final y devolver el módulo a En progreso">
                         <i class="fas fa-rotate-left"></i> Desmarcar evaluación
                     </button>
@@ -1784,18 +1844,31 @@ window.verPruebasAlumno = async function(uidCodificado, emailCodificado, nombreC
             </div>
         `;
     } catch(err) {
-        console.error("Error cargando progreso del alumno:", err);
-        cont.innerHTML = `<p style="color:var(--danger);font-size:12px;">No se pudo cargar el progreso. ${escapeHTML(err.message || '')}</p>`;
+        console.error("Error cargando progreso del usuario:", err);
+        cont.innerHTML = `<p style="color:var(--danger);font-size:12px;">No se pudo leer el progreso desde Firebase. ${escapeHTML(explicarErrorFirebase(err))}</p>`;
     }
 };
 
-window.desmarcarEvaluacionModulo = async function(uidCodificado, moduloCodificado, nombreCodificado, emailCodificado) {
+function explicarErrorFirebase(err) {
+    if(err?.code === 'permission-denied') return 'Acceso denegado por las reglas de Firestore. Comprueba los permisos de la cuenta docente para usuarios/{uid}/progreso_temas, simuladores_guardados y progreso_modulos. No cambies las reglas a acceso público.';
+    return err?.message || 'Error desconocido';
+}
+function esAdministradorActual() {
+    return !!usuarioActual && String(usuarioActual.email || '').toLowerCase() === ADMIN_EMAIL.toLowerCase();
+}
+window.verMisPruebas = async function() {
+    const cont = document.getElementById('admin-lista-mis-pruebas');
+    if(!esAdministradorActual()) { if(cont) cont.textContent = 'Solo está disponible para la cuenta administradora.'; return; }
+    const nombre = usuarioActual.displayName || 'Administrador';
+    return window.verPruebasAlumno(encodeURIComponent(usuarioActual.uid), encodeURIComponent(usuarioActual.email || ''), encodeURIComponent(nombre), 'admin-lista-mis-pruebas');
+};
+window.desmarcarEvaluacionModulo = async function(uidCodificado, moduloCodificado, nombreCodificado, emailCodificado, destino = 'admin-lista-pruebas-alumno') {
     const uid = decodeURIComponent(uidCodificado || '');
     const moduloId = decodeURIComponent(moduloCodificado || '');
     const nombre = decodeURIComponent(nombreCodificado || '');
     const email = decodeURIComponent(emailCodificado || '');
 
-    if(!uid || !moduloId) return;
+    if(!esAdministradorActual() || !uid || !moduloId) return;
     if(!confirm(`¿Desmarcar la evaluación final de ${nombre || 'este alumno'}? El módulo volverá a En progreso y el carrito regresará a la estación de evaluación.`)) return;
 
     try {
@@ -1809,64 +1882,99 @@ window.desmarcarEvaluacionModulo = async function(uidCodificado, moduloCodificad
         await window.verPruebasAlumno(
             encodeURIComponent(uid),
             encodeURIComponent(email),
-            encodeURIComponent(nombre || email)
+            encodeURIComponent(nombre || email), destino
         );
     } catch(err) {
         console.error("No se pudo desmarcar la evaluación final:", err);
-        alert("No se pudo desmarcar la evaluación final: " + (err.message || "Error desconocido"));
+        alert("No se pudo desmarcar la evaluación final: " + explicarErrorFirebase(err));
     }
 };
 
-window.eliminarPruebaAlumno = async function(uidCodificado, intentoCodificado, temaCodificado, nombreCodificado) {
+window.eliminarPruebaAlumno = async function(uidCodificado, intentoCodificado, temaCodificado, nombreCodificado, destino = 'admin-lista-pruebas-alumno') {
     const uid = decodeURIComponent(uidCodificado || '');
     const intentoId = decodeURIComponent(intentoCodificado || '');
     const temaId = decodeURIComponent(temaCodificado || '');
     const nombre = decodeURIComponent(nombreCodificado || '');
 
-    if(!uid || !intentoId) return;
+    if(!esAdministradorActual() || !uid || !intentoId) return;
     if(!confirm(`¿Eliminar esta prueba de ${nombre || 'este alumno'}? El tema volverá a En progreso.`)) return;
 
     try {
         await deleteDoc(doc(db, "usuarios", uid, "simuladores_guardados", intentoId));
-
+        let siguenIntentos = false;
         if(temaId) {
-            await setDoc(doc(db, "usuarios", uid, "progreso_temas", temaId), {
-                status: "yellow",
-                reiniciado_por_admin: true,
-                fecha_reinicio: new Date().toISOString()
-            }, { merge: true });
-
-            try {
+            const restantes = await getDocs(collection(db, "usuarios", uid, "simuladores_guardados"));
+            siguenIntentos = restantes.docs.some(x => x.data()?.tema_id === temaId);
+            // No marcar el tema como pendiente cuando aún hay prácticas almacenadas.
+            if(!siguenIntentos) {
+                await setDoc(doc(db, "usuarios", uid, "progreso_temas", temaId), {
+                    status: "yellow", reiniciado_por_admin: true, fecha_reinicio: new Date().toISOString(),
+                    ultimo_simulador_id: null, ultimo_puntaje: null, ultimo_total: null
+                }, { merge: true });
                 const temaSnap = await getDoc(doc(db, "temas_globales", temaId));
                 const moduloId = temaSnap.exists() ? temaSnap.data()?.modulo_id : "";
                 if(moduloId) {
                     await setDoc(doc(db, "usuarios", uid, "progreso_modulos", moduloId), {
-                        evaluacion_completada: false,
-                        fecha_reinicio_admin: new Date().toISOString()
+                        evaluacion_completada: false, fecha_reinicio_admin: new Date().toISOString()
                     }, { merge: true });
                 }
-            } catch(errModulo) {
-                console.warn("No se pudo reiniciar el progreso de evaluación del módulo:", errModulo);
             }
         }
+        alert(siguenIntentos ? 'Prueba eliminada. Quedan otros intentos guardados, así que el tema sigue completado.' : 'Prueba eliminada. Si no quedan intentos, el tema volvió a En progreso.');
 
-        alert("Prueba eliminada. El tema volvió a En progreso.");
-
-        const alumnoSnap = await getDocs(collection(db, "alumnos_autorizados"));
-        const ficha = alumnoSnap.docs.find(d => String(d.data()?.uid || '') === uid);
-        const email = ficha?.data()?.email || ficha?.id || '';
-        const nombreFicha = ficha?.data()?.nombre || nombre || email;
-
-        await window.verPruebasAlumno(
-            encodeURIComponent(uid),
-            encodeURIComponent(email),
-            encodeURIComponent(nombreFicha)
-        );
+        if(destino === 'admin-lista-mis-pruebas' && uid === usuarioActual?.uid) {
+            await window.verMisPruebas();
+        } else {
+            const alumnoSnap = await getDocs(collection(db, "alumnos_autorizados"));
+            const ficha = alumnoSnap.docs.find(d => String(d.data()?.uid || '') === uid);
+            const email = ficha?.data()?.email || ficha?.id || '';
+            const nombreFicha = ficha?.data()?.nombre || nombre || email;
+            await window.verPruebasAlumno(encodeURIComponent(uid), encodeURIComponent(email), encodeURIComponent(nombreFicha));
+        }
     } catch(err) {
         console.error("No se pudo eliminar la prueba:", err);
-        alert("No se pudo eliminar la prueba: " + (err.message || "Error desconocido"));
+        alert("No se pudo completar el reinicio de la prueba: " + explicarErrorFirebase(err));
     }
 };
+
+// Solo la propia cuenta docente: sin filtros ambiguos, sin borrar materiales ni estudiantes.
+window.reiniciarMiProgreso = async function() {
+    if(!esAdministradorActual()) return;
+    const palabra = prompt('Se eliminarán TODAS tus prácticas, avances y evaluaciones finales de la CUENTA DOCENTE. No afecta a ningún estudiante. Para confirmar escribe REINICIAR:');
+    if(palabra !== 'REINICIAR') return;
+    const btn = document.getElementById('btn-admin-reiniciar-mi-progreso');
+    const estado = document.getElementById('admin-mis-pruebas-status');
+    btn.disabled = true;
+    estado.textContent = 'Consultando registros de tu cuenta…';
+    try {
+        const uid = usuarioActual.uid;
+        const colecciones = ['simuladores_guardados', 'progreso_temas', 'progreso_modulos'];
+        const resultados = await Promise.all(colecciones.map(n => getDocs(collection(db, 'usuarios', uid, n))));
+        const refs = resultados.flatMap(q => q.docs.map(d => d.ref));
+        if(!refs.length) {
+            estado.textContent = 'No había resultados guardados en tu cuenta.';
+        } else {
+            // Cada batch es atómico y contiene menos de las 500 escrituras máximas.
+            for(let i=0; i<refs.length; i+=400) {
+                const batch = writeBatch(db);
+                refs.slice(i,i+400).forEach(ref => batch.delete(ref));
+                await batch.commit();
+                estado.textContent = `Reiniciados ${Math.min(i+400, refs.length)} de ${refs.length} registros. ${i+400<refs.length ? 'Continuando…' : ''}`;
+            }
+            estado.textContent = `Reinicio completado: ${refs.length} registros de tu cuenta. Recarga la vista de materia para actualizar sus colores.`;
+        }
+        simuladoresGuardadosCache = {};
+        await window.verMisPruebas();
+    } catch(err) {
+        console.error('Reinicio de progreso de docente:', err);
+        estado.textContent = 'No se pudo completar el reinicio. ' + explicarErrorFirebase(err) + ' Algunos lotes podrían haberse ejecutado: comprueba los registros antes de repetirlo.';
+    } finally { btn.disabled = false; }
+};
+// Botones siempre instalados en el panel de administración, sin nuevo backend.
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btn-admin-recargar-mis-pruebas')?.addEventListener('click', window.verMisPruebas);
+    document.getElementById('btn-admin-reiniciar-mi-progreso')?.addEventListener('click', window.reiniciarMiProgreso);
+});
 
 window.eliminarDocumento = async function(coleccion, id) {
     if(confirm(`¿Estás seguro de eliminar este elemento definitivamente?`)) {
