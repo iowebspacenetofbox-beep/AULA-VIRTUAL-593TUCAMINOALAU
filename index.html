@@ -1229,7 +1229,216 @@
         }
 
     </style>
-<link rel="stylesheet" href="./aula-studio.css?v=20261011-4">
+<!-- Respaldo autocontenido: evita que un despliegue parcial deje el acceso sin formato.
+     El archivo aula-studio.css se conserva como hoja editable y actualización preferente. -->
+<style id="aula-studio-backup">
+/* Capa visual independiente: respeta los identificadores y vistas existentes. */
+:root{--bg:#f3f6f8;--radius-md:18px;--shadow-sm:0 5px 22px rgba(15,23,42,.045)}
+body{background:var(--bg)}
+.content-container{max-width:1380px;margin-left:auto;margin-right:auto}
+.instruction-card{border:1px solid #e1e8ed;box-shadow:var(--shadow-sm)}
+button,a,input,select,textarea{touch-action:manipulation}
+button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #318478;outline-offset:3px}
+button:disabled{opacity:.55;cursor:wait}
+#sidebar{background:linear-gradient(170deg,#102a36,#10202c 75%)}
+#view-admin .tabs-container{background:#e8eef1;padding:6px;border-radius:14px;gap:4px;border:0;flex-wrap:wrap}
+#view-admin .tab-btn{border:0;border-radius:10px;font-weight:700;white-space:normal}
+#view-admin .tab-btn.active{background:#fff;color:#185c4f;box-shadow:0 3px 9px #132e3812}
+#view-admin .admin-help-banner{background:#edf6f2;border-color:#d1e4dc}
+#view-admin .admin-help-banner>i{color:#31794d}
+.studio-eyebrow{font-size:10px;font-weight:800;letter-spacing:.16em;color:#357764;margin:6px 0 8px}
+.studio-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 24px}
+.studio-stats>div{background:white;border:1px solid #dfe7ec;border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:3px}
+.studio-stats strong{font-size:27px;color:#173d42}.studio-stats span{font-size:12px;color:#667782}
+#admin-tab-temas:not(.hidden){display:grid;grid-template-columns:minmax(0,1fr) 315px;gap:20px;align-items:start}
+#admin-tab-temas>.instruction-card{min-width:0;margin-top:0}
+#admin-tab-temas>.instruction-card:last-child{padding:18px}
+#admin-tab-temas .admin-list-row{flex-wrap:wrap;gap:8px;background:white}
+#admin-tab-temas .admin-list-actions{width:100%;justify-content:flex-end}
+#view-admin h3{letter-spacing:-.02em}
+.studio-quickbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.studio-quickbar .btn-outline,.studio-quickbar .btn-success{font-size:12px;padding:9px 12px;text-decoration:none}
+.studio-hint{font-size:12px;color:#607280;line-height:1.65;font-weight:400}
+#admin-rich-editor{min-height:380px;max-height:65vh;overflow:auto;padding:24px;line-height:1.8;font-size:16px;background:#fff;overflow-wrap:anywhere}
+#admin-rich-editor img,#admin-editor-preview img,#tema-resumen img{max-width:100%;height:auto}
+.editor-toolbar{background:#f2f6f8;padding:10px;gap:7px;border-bottom:1px solid #dce5eb}
+.editor-actions{background:#fafcfd}.editor-actions button{font-size:11px!important}
+.studio-editor-meta{display:flex;justify-content:space-between;gap:10px;color:#6b7c86;font-size:11px;margin:9px 0 14px}
+.editor-preview{background:#fff;border:1px solid #b9d7ca;padding:24px;line-height:1.8;overflow-wrap:anywhere}
+.editor-preview:before{content:'VISTA PREVIA · CONTENIDO DEL TEMA';display:block;font-size:10px;letter-spacing:.12em;color:#357764;margin-bottom:20px}
+.studio-tools-admin{background:#f6faf8;border:1px solid #d7e5df;padding:18px;border-radius:14px;margin:24px 0}
+.studio-tool-row{border:1px solid #dce6e1;background:#fff;border-radius:12px;padding:16px;margin:12px 0}
+.studio-tool-row label,.studio-dialog label{display:block;font-size:12px;font-weight:650;margin:10px 0}
+.studio-tool-row input,.studio-tool-row select,.studio-tool-row textarea{margin-top:5px;font-weight:400;box-sizing:border-box;width:100%}
+.studio-tool-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px}.studio-tool-head button{font-size:11px;padding:6px 9px}
+#view-admin .admin-save-row{position:sticky;bottom:0;background:rgba(255,255,255,.97);padding:14px 0;border-top:1px solid #e1e9ed;z-index:4}
+#studio-search{margin:8px 0}#studio-search-status:empty{display:none}
+.studio-dialog{width:min(680px,94vw);max-height:88vh;border:1px solid #d7e3e8;border-radius:20px;padding:26px;color:#172d39;box-shadow:0 32px 100px #102b3940}
+.studio-dialog::backdrop{background:#0c2335aa;backdrop-filter:blur(3px)}
+.studio-dialog header,.studio-dialog footer{display:flex;align-items:center;justify-content:space-between;gap:12px}.studio-dialog h2{font-size:22px;margin:0}.studio-dialog p{line-height:1.6;font-size:14px}
+.studio-dialog textarea,.studio-dialog select{display:block;width:100%;margin-top:8px}.studio-dialog footer{justify-content:flex-end;margin-top:20px}.studio-dialog-error{color:#b42318}
+.studio-resource-card{padding:26px;border:1px solid #d8e4de;border-radius:18px;background:linear-gradient(120deg,#f3f9f5,#fff 65%);margin:0 0 18px}
+.studio-resource-card h3{font-size:23px;color:#214d3c;margin:8px 0}.studio-resource-card p{line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.studio-resource-card iframe{width:100%;height:660px;max-height:78vh;border:1px solid #dce5eb;background:white;border-radius:12px;margin-top:16px}
+#menu-recursos{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px!important}#menu-recursos.hidden{display:none!important}
+#menu-recursos .btn-recurso{width:100%;min-height:145px;border:1px solid #dce5e4;border-radius:18px;box-shadow:var(--shadow-sm);background:#fff;color:#28413d}
+#menu-recursos .btn-recurso:hover{border-color:rgb(58,124,34);background:#f4f9f1}
+#tema-resumen{background:white!important;border:1px solid #e3e9ed;border-radius:18px!important;padding:clamp(18px,3vw,42px)!important;font-size:17px!important;line-height:1.85!important;overflow-wrap:anywhere;overflow-x:auto}
+#tema-resumen h2,#admin-rich-editor h2{color:#234d42}#tema-resumen blockquote,#admin-rich-editor blockquote{border-left:4px solid #3a7c22;background:#f1f7ed;padding:14px 20px;margin:20px 0}
+.studio-focus #admin-tab-temas>.instruction-card:first-child{position:fixed;inset:18px;z-index:1200;overflow:auto;max-width:1100px;margin:auto;box-shadow:0 0 0 100vmax #102b39b0;padding:28px}
+.studio-focus #admin-rich-editor{max-height:55vh;min-height:42vh}
+.studio-saving>*{pointer-events:none}.studio-saving{opacity:.8}
+@media(max-width:1200px){#admin-tab-temas:not(.hidden){grid-template-columns:minmax(0,1fr)}#admin-tab-temas>.instruction-card:last-child{order:2}}
+@media(max-width:600px){.studio-stats{grid-template-columns:repeat(2,1fr);gap:8px}.studio-stats>div{padding:12px}.studio-focus #admin-tab-temas>.instruction-card:first-child{inset:5px;padding:15px}.studio-resource-card{padding:18px}.studio-dialog{padding:18px}#admin-rich-editor{padding:16px}.studio-tool-head{flex-wrap:wrap}#menu-recursos{grid-template-columns:repeat(2,minmax(0,1fr))}.studio-editor-meta{flex-wrap:wrap}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+
+#view-admin [hidden]{display:none!important}
+
+/* Acceso 593: portada editorial y formulario accesible. */
+#view-login{max-width:none;width:100%;padding:24px;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#eef2f4}
+.access-shell{width:100%;max-width:1420px;min-height:min(830px,calc(100vh - 48px));display:grid;grid-template-columns:1fr 1fr;background:#fff;border:1px solid #e1e7ed;border-radius:26px;overflow:hidden;box-shadow:0 18px 80px #1830420b}
+.access-visual{position:relative;background:#06172d;min-height:740px;overflow:hidden;color:#fff}
+.access-cover{position:absolute;width:100%;height:100%;object-fit:cover;object-position:center 65%;inset:0}
+.access-story{position:relative;z-index:1;padding:52px 46px 100px;background:linear-gradient(#06172d55,transparent)}
+.access-eyebrow{font-size:10px;letter-spacing:.2em;font-weight:800;color:#387466}
+.access-story .access-eyebrow{color:#e6c686}
+.access-story h2{font-size:clamp(26px,2.7vw,40px);line-height:1.16;letter-spacing:-.035em;max-width:470px;margin:20px 0 16px;font-weight:750}
+.access-story p{font-size:14px;line-height:1.7;color:#d2dfec;margin:0}
+.access-caption{position:absolute;bottom:24px;left:34px;display:flex;align-items:center;gap:10px;font-size:11px;font-weight:600;padding:12px 17px;background:#071a2ddd;border:1px solid #a8c6d32e;border-radius:30px;backdrop-filter:blur(12px);letter-spacing:.05em}
+.access-dot{width:7px;height:7px;background:#efce85;border-radius:50%}
+.access-form-panel{display:flex;flex-direction:column;justify-content:space-between;padding:34px clamp(28px,4vw,72px);background:#fff;min-width:0}
+.access-brand{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.access-brand img{width:185px;height:auto;object-fit:contain}.access-brand>span{font-size:9px;letter-spacing:.16em;color:#798791;font-weight:700;white-space:nowrap}
+#view-login .login-card{max-width:390px;width:100%;margin:38px auto;padding:0;text-align:left;background:none;box-shadow:none;border:0;backdrop-filter:none;border-radius:0}
+.login-card h1{font-size:clamp(30px,3vw,43px);font-weight:750;line-height:1.12;letter-spacing:-.045em;color:#152d3b;margin:15px 0}
+.access-intro{color:#71808b;font-size:14px;line-height:1.7;margin:0 0 30px;max-width:340px}
+#view-login .input-group{margin-bottom:18px}#view-login label{font-size:12px;font-weight:650;color:#304654;display:block;margin-bottom:9px}
+#view-login input{height:52px;border:1px solid #dce4e9;border-radius:10px;background:#fafcfd;font-size:14px;padding:0 15px;box-shadow:none;width:100%;transition:border-color .2s,box-shadow .2s}
+#view-login input:focus{border-color:#357764;outline:0;box-shadow:0 0 0 3px #35776418;background:#fff}
+.access-password{position:relative}.access-password input{padding-right:80px!important}.access-password button{position:absolute;right:9px;top:9px;height:34px;padding:0 8px;border:0;background:transparent;box-shadow:none;color:#4c6869;font-size:11px;cursor:pointer;border-radius:7px}.access-password button:hover{background:#eaf1ed;transform:none}
+#view-login .access-submit{display:flex;justify-content:space-between;align-items:center;width:100%;border-radius:10px;background:#183c3b;border:1px solid #183c3b;padding:15px 20px;font-size:14px;box-shadow:0 6px 15px #183c3b15;margin-top:8px;color:#fff}
+#view-login .access-submit:hover{background:#24544d;transform:translateY(-1px)}.access-submit span{font-size:20px;line-height:1}
+.access-divider{display:flex;align-items:center;gap:15px;color:#8a98a2;font-size:11px;margin:23px 0}.access-divider:before,.access-divider:after{content:'';height:1px;background:#e7ecef;flex:1}
+#view-login .access-google{width:100%;justify-content:center;display:flex;gap:12px;align-items:center;height:49px;background:white;border:1px solid #dce4e9;color:#263d4a;box-shadow:none;border-radius:10px;font-size:13px}
+#view-login .access-google:hover{background:#f6f8fa;transform:none}
+#view-login #login-error{color:#a12d25;background:#fff3f1;border:1px solid #f2d1cb;border-radius:10px;padding:12px;font-size:12px;line-height:1.6;margin-top:18px}
+.access-help{font-size:11px;line-height:1.7;text-align:center;color:#425c68;margin:23px 0 0}.access-help span{display:block;color:#81909b}
+.access-footer{text-align:center;font-size:10px;color:#82919a;letter-spacing:.02em}.access-footer span{padding:0 8px}
+@media(min-width:1500px){.access-visual{min-height:830px}}
+@media(max-width:1000px){.access-form-panel{padding:28px}.access-story{padding:40px 28px}.access-brand>span{display:none}.access-brand img{width:165px}.access-visual{min-height:730px}}
+@media(max-width:700px){#view-login{padding:0;align-items:stretch}.access-shell{border:0;border-radius:0;grid-template-columns:1fr;box-shadow:none}.access-visual{min-height:260px;order:0}.access-cover{object-position:center 57%}.access-story{padding:28px 24px 35px;background:linear-gradient(90deg,#06172ded 5%,#06172d90 60%,transparent);min-height:260px}.access-story h2{font-size:25px;max-width:290px;margin:13px 0}.access-story p{font-size:12px;max-width:235px}.access-caption{display:none}.access-form-panel{padding:24px}.access-brand img{width:150px}.access-brand>span{display:block;font-size:8px}#view-login .login-card{margin:30px auto 26px;max-width:440px}.login-card h1{font-size:33px}.access-intro{margin-bottom:24px}.access-footer{padding-bottom:8px}}
+
+/* 2026-10 · Acceso sobrio. Solo afecta a la vista de inicio de sesión. */
+#view-login{padding:clamp(10px,1.5vw,20px);min-height:100vh;background:#f2f5fa;align-items:center}
+#view-login .access-shell{max-width:1280px;min-height:min(670px,calc(100vh - 24px));grid-template-columns:minmax(410px,.98fr) minmax(410px,1fr);background:#fff;border:1px solid #dfe7f1;border-radius:22px;box-shadow:0 24px 76px rgba(15,23,42,.09)}
+#view-login .access-visual{min-height:620px;background:radial-gradient(ellipse at 85% 16%,rgba(53,123,232,.21),transparent 46%),linear-gradient(145deg,#0b1a35 0%,#142a4c 48%,#12253e 100%);isolation:isolate;padding:clamp(22px,2.7vw,40px);display:flex;flex-direction:column;justify-content:space-between;gap:18px}
+#view-login .access-visual:before{content:'';position:absolute;inset:0;opacity:.18;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.16) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.16) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(90deg,transparent 0%,#000 100%)}
+#view-login .access-glow{position:absolute;z-index:0;width:480px;height:480px;border-radius:50%;border:1px solid rgba(177,207,255,.12);top:-150px;right:-240px;box-shadow:0 0 0 70px rgba(133,181,255,.025),0 0 0 140px rgba(133,181,255,.02);pointer-events:none}
+#view-login .access-left-top{display:flex;align-items:center;gap:13px;color:#dae6fa;font-size:11px;letter-spacing:.14em;font-weight:800;z-index:1}
+#view-login .access-mark{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;color:#fff;font-size:19px;background:rgba(103,153,244,.21);border:1px solid rgba(185,213,255,.2)}
+#view-login .access-story{background:none;z-index:1;padding:14px 0 0}
+#view-login .access-eyebrow{color:#71859b;font-size:10px;letter-spacing:.17em;font-weight:800;display:flex;align-items:center;gap:9px}
+#view-login .access-story .access-eyebrow{color:#a8c8f2}
+#view-login .access-dot{width:7px;height:7px;display:inline-block;border-radius:50%;background:#74d8a3;box-shadow:0 0 0 5px rgba(116,216,163,.10)}
+#view-login .access-story h2{font-size:clamp(38px,4.2vw,58px);line-height:1.06;max-width:560px;letter-spacing:-.058em;margin:14px 0 12px;font-weight:800;color:#fff}
+#view-login .access-story h2 em{display:block;font-style:normal;color:#9edab9}
+#view-login .access-story p{color:#bed0e6;max-width:430px;line-height:1.6;font-size:14px}
+#view-login .access-showcase{z-index:1;border-radius:17px;background:rgba(255,255,255,.96);box-shadow:0 20px 50px rgba(0,0,0,.16);padding:14px 16px;color:#243247;max-width:470px;width:100%}
+#view-login .access-showcase-head{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;font-weight:800;padding:1px 3px 10px;border-bottom:1px solid #ebeff5}
+#view-login .access-showcase-head i{margin-right:7px;color:#245a9a}
+#view-login .access-showcase-pill{font-size:9px;letter-spacing:.08em;background:#e7f7ee;color:#206645;padding:6px 8px;border-radius:999px}
+#view-login .access-showcase-item{display:flex;align-items:center;gap:12px;padding:8px 3px 0}
+#view-login .access-showcase-item>div:nth-child(2){flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+#view-login .access-showcase-item b{font-size:12px;color:#243247}
+#view-login .access-showcase-item small{font-size:10.5px;color:#8995a7}
+#view-login .access-showcase-icon{height:34px;width:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;background:#e6f1ff;color:#2763ab;font-size:14px}
+#view-login .access-showcase-icon.purple{background:#eeeafd;color:#6d52ad}
+#view-login .access-showcase-icon.sky{background:#e8f7f5;color:#217970}
+#view-login .access-check{color:#39a772;font-size:16px}
+#view-login .access-inprogress{width:9px;height:9px;border-radius:50%;background:#d6b05f;margin-right:5px}
+#view-login .access-arrow{color:#b5c0ce;font-size:13px}
+#view-login .access-left-bottom{display:flex;align-items:center;gap:11px;color:#93a9c4;font-size:9px;letter-spacing:.14em;font-weight:800;z-index:1;flex-wrap:wrap}
+#view-login .access-left-separator{height:3px;width:3px;border-radius:50%;background:#7190b5}
+#view-login .access-form-panel{padding:clamp(18px,2.5vw,34px) clamp(24px,4vw,54px);justify-content:space-between}
+#view-login .access-brand{gap:15px;align-items:center}
+#view-login .access-brand img{width:155px;max-height:50px;object-fit:contain;object-position:left center}
+#view-login .access-brand>span{display:inline-flex;font-size:9px;border:1px solid #dfe7f0;border-radius:999px;color:#6a7e98;padding:7px 10px;letter-spacing:.1em;background:#f8fafc}
+#view-login .login-card{max-width:410px;width:100%;margin:16px auto 18px;animation:loginIn .35s ease both}
+#view-login .login-card h1{font-size:clamp(32px,3vw,44px);color:#152643;letter-spacing:-.048em;line-height:1.08;font-weight:800;margin:10px 0 8px}
+#view-login .access-title-period{color:#2c8f69}
+#view-login .access-intro{color:#738299;font-size:13px;margin-bottom:18px;line-height:1.55;max-width:360px}
+#view-login .input-group{margin-bottom:14px}
+#view-login label{font-size:12px;color:#304159;font-weight:750;letter-spacing:.01em}
+#view-login .access-input-wrap{position:relative}
+#view-login .access-input-wrap>i{position:absolute;top:50%;left:15px;transform:translateY(-50%);color:#94a2b6;z-index:1;font-size:14px;pointer-events:none}
+#view-login .access-input-wrap input{padding-left:44px;border-radius:11px;height:49px;background:#f9fbfe;border:1px solid #dce4ef;color:#18283f;font-size:13px}
+#view-login .access-input-wrap input:focus{border-color:#3975b9;box-shadow:0 0 0 4px rgba(57,117,185,.11)}
+#view-login .access-password input{padding-right:82px!important}
+#view-login .access-password button{top:8px;right:10px;height:31px;font-size:12px;color:#36547a;font-weight:750}
+#view-login .access-submit{height:50px;border-radius:11px;padding:0 19px;background:#225cc2;border-color:#225cc2;font-weight:800;font-size:13.5px;box-shadow:0 10px 25px rgba(34,92,194,.18);margin-top:6px}
+#view-login .access-submit:hover{background:#174baf;border-color:#174baf;box-shadow:0 13px 27px rgba(34,92,194,.23)}
+#view-login .access-submit i{font-size:14px}
+#view-login .access-divider{margin:15px 0;color:#8899ae;font-size:10px;letter-spacing:.08em;font-weight:700}
+#view-login .access-google{height:46px;border-radius:11px;border-color:#dce4ef;font-weight:750;font-size:13px;color:#354259}
+#view-login .access-help{display:flex;align-items:flex-start;justify-content:center;gap:8px;color:#8291a4;margin-top:16px;font-size:11px;line-height:1.5;text-align:left}
+#view-login .access-help i{color:#3c9b76;margin-top:2px}
+#view-login .access-footer{display:flex;justify-content:center;gap:13px;align-items:center;letter-spacing:0;font-size:10.5px;color:#9aa6b7}
+#view-login .access-footer-dot{height:3px;width:3px;border-radius:50%;background:#a3b1c2;padding:0}
+#view-login #login-error{margin:15px 0 0;font-size:12px}
+@media(max-width:1050px){#view-login .access-shell{grid-template-columns:minmax(300px,.85fr) minmax(360px,1fr);min-height:min(640px,calc(100vh - 18px))}#view-login .access-visual{padding:28px}#view-login .access-story h2{font-size:44px}#view-login .access-form-panel{padding:24px}}
+@media(max-width:740px){#view-login{padding:0;background:#fff;display:block}#view-login .access-shell{display:flex;flex-direction:column;min-height:100vh;border:0;box-shadow:none;border-radius:0}#view-login .access-visual{min-height:unset;flex:none;padding:24px 28px 27px;gap:0}#view-login .access-left-top{font-size:10px}#view-login .access-mark{width:36px;height:36px}#view-login .access-story{padding:22px 0 0}#view-login .access-story h2{font-size:clamp(33px,8vw,45px);margin:12px 0 8px}#view-login .access-story h2 br{display:none}#view-login .access-story p{font-size:12px;line-height:1.5;max-width:430px}#view-login .access-showcase,#view-login .access-left-bottom{display:none}#view-login .access-form-panel{padding:24px clamp(23px,6vw,45px);flex:1}#view-login .access-brand img{width:155px}#view-login .login-card{margin:35px auto 27px}#view-login .login-card h1{font-size:38px}#view-login .access-footer{padding-bottom:10px}}
+@media(max-width:410px){#view-login .access-brand>span{font-size:8px;padding:6px 8px}#view-login .access-brand img{width:138px}#view-login .access-story p{font-size:11px}#view-login .access-form-panel{padding-inline:22px}}
+
+/* Espacio ampliado real para el editor; el modo nativo se inicia por clic. */
+#admin-tab-temas>.instruction-card:first-child:fullscreen,#admin-tab-temas>.instruction-card:first-child:-webkit-full-screen{width:100vw;max-width:none;height:100vh;max-height:100vh;overflow:auto;margin:0;padding:clamp(18px,2.6vw,42px);border-radius:0;background:#f8fafc;box-shadow:none}
+#admin-tab-temas>.instruction-card:first-child:fullscreen #admin-rich-editor,#admin-tab-temas>.instruction-card:first-child:-webkit-full-screen #admin-rich-editor{min-height:48vh;max-height:none}
+body.studio-focus #admin-tab-temas>.instruction-card:first-child{inset:0;max-width:none;width:100vw;max-height:100vh;overflow:auto;margin:0;padding:clamp(18px,3vw,42px);border-radius:0;z-index:5000;background:#f8fafc}
+body.studio-focus #admin-rich-editor{min-height:45vh;max-height:65vh}
+#studio-focus[aria-pressed="true"]{background:#18395c;color:white;border-color:#18395c}
+/* Panel seguro de resultados de la cuenta docente */
+.admin-personal-header{display:flex;gap:14px;align-items:center;margin-bottom:18px}
+.admin-personal-icon{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;background:#e9f1ff;color:#235ba8;font-size:20px;flex:none}
+.admin-personal-actions{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+#admin-mis-pruebas-status{font-size:12px;line-height:1.55;color:#49637e;margin:8px 0;white-space:pre-wrap}
+#admin-lista-mis-pruebas .admin-list-row{gap:12px;align-items:center;flex-wrap:wrap;padding:12px;border:1px solid #e5eaf1;border-radius:12px;margin:8px 0}
+#admin-lista-mis-pruebas h5{margin-bottom:10px!important}
+#admin-lista-mis-pruebas .admin-mini-btn{min-height:35px}
+@media(max-width:650px){.admin-personal-actions>*{width:100%;justify-content:center}#admin-lista-mis-pruebas .admin-mini-btn{width:100%}}
+/* Evita que el centrado recorte el acceso en pantallas con poca altura. */
+#view-login{align-items:safe center}
+@media(max-width:740px){#view-login .access-story{min-height:0}#view-login .access-visual{min-height:0}#view-login .login-card{margin-top:24px}#view-login .access-intro{margin-bottom:21px}}
+
+/* Inicio de sesión adaptable y legible en pantallas pequeñas.
+   Afecta solamente a #view-login. */
+@media (max-width: 740px) {
+  #view-login .access-visual { padding: 19px 24px 21px; }
+  #view-login .access-story { padding-top: 10px; }
+  #view-login .access-story h2 { font-size: clamp(27px, 7.4vw, 34px); line-height: 1.13; margin: 9px 0 7px; }
+  #view-login .access-story h2 em { display:inline; margin-left:.18em; }
+  #view-login .access-story p { font-size: 12px; line-height: 1.4; margin: 0; max-width: 340px; }
+  #view-login .access-form-panel { padding-top: 18px; padding-bottom: 16px; }
+  #view-login .access-brand img { width: 146px; max-height: 48px; }
+  #view-login .login-card { margin-top: 24px; margin-bottom: 20px; }
+  #view-login .login-card h1 { font-size: 35px; margin: 9px 0 9px; }
+  #view-login .access-intro { font-size: 12.5px; margin-bottom: 22px; }
+  #view-login .input-group { margin-bottom: 15px; }
+  #view-login .access-input-wrap input { height: 49px; }
+  #view-login .access-submit { height: 49px; margin-top: 5px; }
+  #view-login .access-divider { margin: 14px 0; }
+  #view-login .access-google { height: 46px; }
+  #view-login .access-help { margin-top: 17px; }
+}
+@media (min-width: 741px) and (max-width: 900px) {
+  #view-login .access-shell { grid-template-columns: minmax(0, .82fr) minmax(0, 1fr); min-height: min(620px, calc(100vh - 16px)); }
+  #view-login .access-visual { padding: 22px; }
+  #view-login .access-story h2 { font-size: clamp(34px, 4.4vw, 44px); }
+  #view-login .access-form-panel { padding: 22px; }
+  #view-login .access-brand img { width: 145px; }
+  #view-login .access-brand > span { display: none; }
+}
+
+</style>
+<link rel="stylesheet" href="./aula-studio.css?v=20261011-5">
 </head>
 <body>
 
@@ -1281,7 +1490,7 @@
                     <div class="access-left-top"><span class="access-mark"><i class="fas fa-graduation-cap" aria-hidden="true"></i></span><span>PLATAFORMA EDUCATIVA</span></div>
                     <div class="access-story">
                         <div class="access-eyebrow"><span class="access-dot"></span> TU ESPACIO PARA AVANZAR</div>
-                        <h2>Aprender es<br><em>ir más lejos.</em></h2>
+                        <h2>Aprender es <em>ir más lejos.</em></h2>
                         <p>Todo lo que necesitas para estudiar, practicar y medir tu progreso, en un solo lugar.</p>
                     </div>
                     <div class="access-showcase" aria-hidden="true">
