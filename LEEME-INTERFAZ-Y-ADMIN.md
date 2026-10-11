@@ -5,8 +5,9 @@
 1. Conserva una copia del código que actualmente tienes publicado.
 2. Extrae este ZIP. Dentro de la carpeta del proyecto están todos los archivos del aula.
 3. En tu repositorio, sustituye `index.html` y `app.js`, y agrega `aula-studio.css` y `aula-studio.js` en la misma carpeta. También puedes subir el contenido completo de la carpeta conservando tus archivos adicionales.
-4. No borres imágenes, PDFs, videos u otras herramientas que ya tengas en tu repositorio y no aparezcan en este ZIP.
-5. Despliega mediante tu procedimiento actual. Recarga con Ctrl + F5 para cargar la nueva interfaz.
+4. Agrega también `imagenes/portada-acceso.png` dentro de tu carpeta `imagenes`. Es la nueva ilustración del inicio de sesión.
+5. No borres imágenes, PDFs, videos u otras herramientas que ya tengas en tu repositorio y no aparezcan en este ZIP.
+6. Despliega mediante tu procedimiento actual. Recarga con Ctrl + F5 para cargar la nueva interfaz.
 
 No se requiere una clave adicional ni una dependencia de servidor nueva. Esta entrega modifica archivos locales; no publica cambios en tu sitio ni escribe en tu Firebase de producción.
 
@@ -61,3 +62,15 @@ Los recursos interactivos no marcan automáticamente un tema como aprobado ni ca
 - `aula-studio.css`: diseño del estudio y mejoras de lectura, tarjetas y adaptación móvil.
 
 Los demás archivos originales se conservan. Consulta `VALIDACION-INTERFAZ.txt` para conocer las comprobaciones y su alcance.
+
+## Actualización del inicio de sesión
+
+Se incluye una portada nueva con la mascota y el camino a la universidad, una composición de dos columnas en escritorio y una versión vertical para móvil. Se conservan los mismos controles y eventos de acceso de Firebase, con correo/contraseña y Google. Se añade Mostrar/Ocultar contraseña y compatibilidad con los gestores de contraseñas mediante autocompletado. No se añade registro público ni se modifican permisos.
+
+La ilustración `imagenes/portada-acceso.png` se creó con la herramienta integrada de generación de imágenes. El logotipo original se mantiene. Prompt de la portada: ilustración educativa vertical premium de la mascota blanca con birrete azul y gafas, sobre un libro abierto, camino ascendente de páginas hacia una universidad, fondo azul noche, iluminación dorada y espacio superior para texto; sin letras ni controles. Se usó el logotipo como referencia de la mascota.
+
+## Corrección de botones que no responden
+
+El editor se inicializa ahora tanto antes como después de que termine de cargar el documento. Su código también está integrado al final de index.html, con exclusión de carga diferida de Cloudflare, para que los botones no dependan de que llegue un segundo archivo JavaScript. aula-studio.js queda como copia fuente de ese mismo código. Si editas esa fuente en el futuro, debes actualizar también el bloque integrado de index.html.
+
+Para aplicar esta corrección, sube el contenido completo del ZIP conservando las subcarpetas. El cambio esencial está en index.html; no basta con reemplazar aula-studio.js. También se incluye el nuevo inicio de sesión y su imagen. Espera a que termine correctamente el despliegue antes de probar.

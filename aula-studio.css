@@ -59,3 +59,37 @@ button:disabled{opacity:.55;cursor:wait}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
 #view-admin [hidden]{display:none!important}
+
+/* Acceso 593: portada editorial y formulario accesible. */
+#view-login{max-width:none;width:100%;padding:24px;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#eef2f4}
+.access-shell{width:100%;max-width:1420px;min-height:min(830px,calc(100vh - 48px));display:grid;grid-template-columns:1fr 1fr;background:#fff;border:1px solid #e1e7ed;border-radius:26px;overflow:hidden;box-shadow:0 18px 80px #1830420b}
+.access-visual{position:relative;background:#06172d;min-height:740px;overflow:hidden;color:#fff}
+.access-cover{position:absolute;width:100%;height:100%;object-fit:cover;object-position:center 65%;inset:0}
+.access-story{position:relative;z-index:1;padding:52px 46px 100px;background:linear-gradient(#06172d55,transparent)}
+.access-eyebrow{font-size:10px;letter-spacing:.2em;font-weight:800;color:#387466}
+.access-story .access-eyebrow{color:#e6c686}
+.access-story h2{font-size:clamp(26px,2.7vw,40px);line-height:1.16;letter-spacing:-.035em;max-width:470px;margin:20px 0 16px;font-weight:750}
+.access-story p{font-size:14px;line-height:1.7;color:#d2dfec;margin:0}
+.access-caption{position:absolute;bottom:24px;left:34px;display:flex;align-items:center;gap:10px;font-size:11px;font-weight:600;padding:12px 17px;background:#071a2ddd;border:1px solid #a8c6d32e;border-radius:30px;backdrop-filter:blur(12px);letter-spacing:.05em}
+.access-dot{width:7px;height:7px;background:#efce85;border-radius:50%}
+.access-form-panel{display:flex;flex-direction:column;justify-content:space-between;padding:34px clamp(28px,4vw,72px);background:#fff;min-width:0}
+.access-brand{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.access-brand img{width:185px;height:auto;object-fit:contain}.access-brand>span{font-size:9px;letter-spacing:.16em;color:#798791;font-weight:700;white-space:nowrap}
+#view-login .login-card{max-width:390px;width:100%;margin:38px auto;padding:0;text-align:left;background:none;box-shadow:none;border:0;backdrop-filter:none;border-radius:0}
+.login-card h1{font-size:clamp(30px,3vw,43px);font-weight:750;line-height:1.12;letter-spacing:-.045em;color:#152d3b;margin:15px 0}
+.access-intro{color:#71808b;font-size:14px;line-height:1.7;margin:0 0 30px;max-width:340px}
+#view-login .input-group{margin-bottom:18px}#view-login label{font-size:12px;font-weight:650;color:#304654;display:block;margin-bottom:9px}
+#view-login input{height:52px;border:1px solid #dce4e9;border-radius:10px;background:#fafcfd;font-size:14px;padding:0 15px;box-shadow:none;width:100%;transition:border-color .2s,box-shadow .2s}
+#view-login input:focus{border-color:#357764;outline:0;box-shadow:0 0 0 3px #35776418;background:#fff}
+.access-password{position:relative}.access-password input{padding-right:80px!important}.access-password button{position:absolute;right:9px;top:9px;height:34px;padding:0 8px;border:0;background:transparent;box-shadow:none;color:#4c6869;font-size:11px;cursor:pointer;border-radius:7px}.access-password button:hover{background:#eaf1ed;transform:none}
+#view-login .access-submit{display:flex;justify-content:space-between;align-items:center;width:100%;border-radius:10px;background:#183c3b;border:1px solid #183c3b;padding:15px 20px;font-size:14px;box-shadow:0 6px 15px #183c3b15;margin-top:8px;color:#fff}
+#view-login .access-submit:hover{background:#24544d;transform:translateY(-1px)}.access-submit span{font-size:20px;line-height:1}
+.access-divider{display:flex;align-items:center;gap:15px;color:#8a98a2;font-size:11px;margin:23px 0}.access-divider:before,.access-divider:after{content:'';height:1px;background:#e7ecef;flex:1}
+#view-login .access-google{width:100%;justify-content:center;display:flex;gap:12px;align-items:center;height:49px;background:white;border:1px solid #dce4e9;color:#263d4a;box-shadow:none;border-radius:10px;font-size:13px}
+#view-login .access-google:hover{background:#f6f8fa;transform:none}
+#view-login #login-error{color:#a12d25;background:#fff3f1;border:1px solid #f2d1cb;border-radius:10px;padding:12px;font-size:12px;line-height:1.6;margin-top:18px}
+.access-help{font-size:11px;line-height:1.7;text-align:center;color:#425c68;margin:23px 0 0}.access-help span{display:block;color:#81909b}
+.access-footer{text-align:center;font-size:10px;color:#82919a;letter-spacing:.02em}.access-footer span{padding:0 8px}
+@media(min-width:1500px){.access-visual{min-height:830px}}
+@media(max-width:1000px){.access-form-panel{padding:28px}.access-story{padding:40px 28px}.access-brand>span{display:none}.access-brand img{width:165px}.access-visual{min-height:730px}}
+@media(max-width:700px){#view-login{padding:0;align-items:stretch}.access-shell{border:0;border-radius:0;grid-template-columns:1fr;box-shadow:none}.access-visual{min-height:260px;order:0}.access-cover{object-position:center 57%}.access-story{padding:28px 24px 35px;background:linear-gradient(90deg,#06172ded 5%,#06172d90 60%,transparent);min-height:260px}.access-story h2{font-size:25px;max-width:290px;margin:13px 0}.access-story p{font-size:12px;max-width:235px}.access-caption{display:none}.access-form-panel{padding:24px}.access-brand img{width:150px}.access-brand>span{display:block;font-size:8px}#view-login .login-card{margin:30px auto 26px;max-width:440px}.login-card h1{font-size:33px}.access-intro{margin-bottom:24px}.access-footer{padding-bottom:8px}}

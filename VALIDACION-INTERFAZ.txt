@@ -40,3 +40,24 @@ no estaba en el ZIP y no se probó su integración específica.
 La compatibilidad de cada aplicación integrada depende de su servidor y
 sus requisitos de inicio de sesión/almacenamiento. El enlace para abrirla
 en otra pestaña siempre está disponible.
+
+AMPLIACIÓN: INICIO DE SESIÓN PROFESIONAL
+- Imagen local incluida y cargada correctamente.
+- Campos de correo y contraseña conectados a los eventos originales.
+- Botón Mostrar/Ocultar probado en ambas direcciones.
+- Envío con Enter y visualización de error de acceso simulados.
+- Revisión visual en escritorio (1440 px) y móvil (390 px).
+- Pruebas del editor repetidas: importación TXT, ventana de pegado,
+  plantilla y ampliación del editor superadas.
+- Se añade una imagen: el paquete actualizado contiene 23 archivos.
+- Mismos límites: pruebas con Firebase simulado, sin iniciar sesión real.
+
+CORRECCIÓN DE CARGA DEL EDITOR
+- Se reprodujo el fallo de la versión anterior al cargar su script después
+  de DOMContentLoaded: los cuatro botones quedaban sin eventos.
+- La versión corregida inicia también cuando ese evento ya ocurrió.
+- Probados los cuatro botones en ese escenario, incluido el selector de
+  archivos activado mediante un clic real en Importar texto.
+- Repetidas las pruebas de edición/guardado simulados con el código integrado.
+- El sitio real del usuario no se inspeccionó; no se confirma que la carga
+  tardía fuese la causa concreta de su despliegue.

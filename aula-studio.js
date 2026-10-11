@@ -130,11 +130,15 @@ function search() {
 }
 function refreshAdmin(...counts) { $('studio-stats').innerHTML=counts.map((n,i)=>`<div><strong>${n}</strong><span>${['Materias','Módulos','Temas','Alumnos autorizados'][i]}</span></div>`).join('');search(); }
 window.AulaStudio={cleanHTML,markdown,safeURL,loadTools,readTools,renderTools,previewTools,markClean,canDiscard,refreshAdmin,setSaving(value){saving=value;$('admin-tab-temas').classList.toggle('studio-saving',value);sync();}};
-document.addEventListener('DOMContentLoaded',()=>{
+function initializeStudio(){
+ if(window.__aulaStudioInitialized) return;
+ if(!$('admin-rich-editor')) return;
+ window.__aulaStudioInitialized=true;
+ $('access-toggle-password')?.addEventListener('click',()=>{const input=$('login-password'),button=$('access-toggle-password');const show=input.type==='password';input.type=show?'text':'password';button.textContent=show?'Ocultar':'Mostrar';button.setAttribute('aria-pressed',String(show));button.setAttribute('aria-label',show?'Ocultar contraseña':'Mostrar contraseña');});
  const editor=$('admin-rich-editor'); if(!editor) return;
  const compact=matchMedia('(max-width: 768px)');
  function collapseMobile(){if(compact.matches){$('sidebar').classList.add('collapsed');$('btn-expand-sidebar').classList.remove('hidden');}}
- collapseMobile();compact.addEventListener('change',collapseMobile);
+ collapseMobile();if(compact.addEventListener)compact.addEventListener('change',collapseMobile);else if(compact.addListener)compact.addListener(collapseMobile);
  editor.setAttribute('role','textbox');editor.setAttribute('aria-label','Contenido del tema');editor.setAttribute('aria-multiline','true');
  $('admin-tab-temas').addEventListener('input',sync);$('admin-tab-temas').addEventListener('change',sync);
  $('studio-add-tool').onclick=()=>addTool();$('studio-search').addEventListener('input',search);
@@ -165,5 +169,11 @@ document.addEventListener('DOMContentLoaded',()=>{
  window.addEventListener('beforeunload',e=>{if(dirty()){e.preventDefault();e.returnValue='';}});
  document.querySelectorAll('.editor-actions button').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
  markClean();
-});
+}
+// Funciona tanto durante el HTML como después de una carga diferida.
+if(document.readyState === 'loading') {
+ document.addEventListener('DOMContentLoaded',initializeStudio,{once:true});
+} else {
+ initializeStudio();
+}
 })();
