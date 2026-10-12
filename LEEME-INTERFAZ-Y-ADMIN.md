@@ -1,6 +1,6 @@
 > **Importante, actualización posterior (11/10/2026):** Este documento describe cambios de una versión anterior. El inicio de sesión fue rediseñado nuevamente, el editor ahora utiliza pantalla completa nativa, y la gestión del docente y el registro de intentos se ampliaron. Lee primero `ACTUALIZACION_ACCESO_Y_PRUEBAS.md`, que tiene prioridad sobre las indicaciones anteriores.
 
-# Aula Virtual 593 · Interfaz y estudio del aula
+# Plataforma Virtual de Educación 593 · Interfaz y estudio del aula
 
 ## Instalar esta actualización
 

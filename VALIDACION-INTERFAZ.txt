@@ -1,4 +1,4 @@
-VALIDACIÓN · AULA VIRTUAL 593 · 11 de octubre de 2026
+VALIDACIÓN · Plataforma Virtual de Educación 593 · 11 de octubre de 2026
 
 RESULTADO: pruebas locales superadas con datos simulados.
 

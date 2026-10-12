@@ -77,7 +77,7 @@
     if(!data || data.type !== 'PROFE_IA_CONTEXT') return;
     aulaContext = data.context || {};
     const partes = [aulaContext.materia, aulaContext.modulo, aulaContext.tema, aulaContext.recurso].filter(Boolean);
-    contextEl.textContent = partes.length ? partes.join(' › ') : (aulaContext.ruta || 'Aula virtual');
+    contextEl.textContent = partes.length ? partes.join(' › ') : (aulaContext.ruta || 'Plataforma Virtual de Educación');
   });
 
   function limpiarRespuestaIA(texto = '') {

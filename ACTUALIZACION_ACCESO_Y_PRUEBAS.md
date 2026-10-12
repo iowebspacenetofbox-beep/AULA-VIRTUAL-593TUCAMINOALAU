@@ -33,4 +33,4 @@ El diseño y los controles se verificaron con un navegador local, y el manejo de
 
 ## Si decides cambiar el nombre
 
-El nombre de marca actual sigue en el título de la página, el logo y algunas otras pantallas. La vista nueva usa palabras neutrales como **Plataforma educativa** y **Aula Virtual**. Cuando elijas el nombre definitivo, lo cambiamos de forma consistente en toda la plataforma, sin afectar usuarios ni datos.
+El nombre de marca actual sigue en el título de la página, el logo y algunas otras pantallas. La vista nueva usa palabras neutrales como **Plataforma educativa** y **Plataforma Virtual de Educación**. Cuando elijas el nombre definitivo, lo cambiamos de forma consistente en toda la plataforma, sin afectar usuarios ni datos.
