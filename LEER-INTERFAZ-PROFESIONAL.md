@@ -19,3 +19,9 @@ Comparación con el ZIP de origen: scripts incrustados, eventos e identificadore
 ## Cómo usar esta entrega
 
 Descomprime el ZIP y usa el contenido de su carpeta raíz para actualizar el mismo proyecto, conservando las rutas relativas y la configuración de despliegue existente. Guarda una copia de tu versión publicada antes de actualizar. Este archivo contiene el proyecto completo; no se ha publicado automáticamente.
+
+## Edición Horizonte
+
+Segunda revisión visual: verde profundo y marfil, títulos combinados con tipografía editorial, portada ilustrada del video, tarjetas de aprendizaje y acceso de presentación más elegante. La ilustración se guarda en imagenes/portada-aprendizaje.svg y no reemplaza el video. Esta revisión conserva todos los archivos JavaScript y eventos de la entrega anterior. Pruebas locales con servicios simulados, en escritorio y móvil, completadas.
+
+Este ZIP es completo y sustituye al anterior; no es necesario instalar ambos.
