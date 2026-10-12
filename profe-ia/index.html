@@ -86,11 +86,15 @@
   </style>
 <style id="plataforma-presentacion">
 :root{--ink:#203746;--muted:#647887;--line:#dce5ea;--blue:#216d85;--blue2:#18596e;--violet:#527b87;--bg:#f5f8fa}body{background:var(--bg)}button{border-radius:9px;box-shadow:none}textarea{font-family:inherit;border-radius:12px}button:focus-visible{outline:3px solid #49a995;outline-offset:2px}
-</style></head>
+</style><style id="plataforma-presentacion-refinada">
+:root{--ink:#234637;--muted:#74836e;--line:#dfe6da;--blue:#2a6652;--blue2:#1c4b3c;--violet:#476c42;--bg:#f5f7f1}
+.context{background:#edf2e6;border-color:#dae4d1;color:#41603c;padding:11px 12px}.new-chat-btn{border-color:#cddbc0;color:#426539}.new-chat-btn:hover{background:#f4f7ef}.messages{padding:17px 14px 22px}.welcome{border-color:#dfe6da;box-shadow:none;padding:17px;background:linear-gradient(140deg,#fff,#f5f8ef)}.welcome strong{color:#31543d}.bubble{line-height:1.75;padding:12px 14px}.msg.user .bubble{background:#245740}.msg.ai .bubble{border-color:#e1e7dc;box-shadow:0 3px 12px #17383303}.composer{background:#fafcf8;border-color:#dce5d4}.box{border-color:#d4e0c9;box-shadow:0 5px 18px #17383305}.msg.ai .bubble blockquote{background:#eef4e8;border-color:#9cb782}.edit-message-box{border-color:#cdddc0}.edit-message-save{background:#245740!important}.hint{color:#7b8b73}
+</style>
+</head>
 <body>
 <div class="app">
   <div class="context">
-    <div class="context-main"><i class="fas fa-location-dot"></i><span id="context-text">Aula virtual</span></div>
+    <div class="context-main"><i class="fas fa-location-dot"></i><span id="context-text">Plataforma Virtual de Educación</span></div>
     <button id="new-chat" class="new-chat-btn" type="button" title="Iniciar un chat nuevo"><i class="fas fa-plus"></i><span>Nuevo chat</span></button>
   </div>
   <main class="messages" id="messages">

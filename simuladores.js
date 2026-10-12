@@ -73,7 +73,7 @@ async function typeset(element = document.body) {
 
 async function cargarContexto() {
   if (!temaId || !materiaId) {
-    throw new Error("No se recibió el tema desde el aula. Vuelve al tema e intenta abrir la práctica otra vez.");
+    throw new Error("No se recibió el tema desde la plataforma. Vuelve al tema e intenta abrir la práctica otra vez.");
   }
 
   const [temaSnap, materiaSnap] = await Promise.all([
@@ -326,7 +326,7 @@ generateBtn.addEventListener("click", generarPractica);
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
-    setStatus("Debes iniciar sesión en el aula antes de abrir los ejercicios de práctica.", "error");
+    setStatus("Debes iniciar sesión en la plataforma antes de abrir los ejercicios de práctica.", "error");
     generateBtn.disabled = true;
     return;
   }

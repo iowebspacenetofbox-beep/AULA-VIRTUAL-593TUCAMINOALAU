@@ -25,3 +25,17 @@ Descomprime el ZIP y usa el contenido de su carpeta raíz para actualizar el mis
 Segunda revisión visual: verde profundo y marfil, títulos combinados con tipografía editorial, portada ilustrada del video, tarjetas de aprendizaje y acceso de presentación más elegante. La ilustración se guarda en imagenes/portada-aprendizaje.svg y no reemplaza el video. Esta revisión conserva todos los archivos JavaScript y eventos de la entrega anterior. Pruebas locales con servicios simulados, en escritorio y móvil, completadas.
 
 Este ZIP es completo y sustituye al anterior; no es necesario instalar ambos.
+
+## Horizonte — acabado refinado
+
+Inicio más compacto, tarjetas editoriales, controles uniformes, recursos de aprendizaje y administración refinados. Profe IA se abre desde una cápsula inferior; su funcionamiento permanece igual. Se armonizaron el chat y las prácticas con la paleta verde y marfil. Dos mensajes visibles en simuladores.js usan ahora «plataforma» en lugar de «aula»; su lógica permanece intacta.
+
+Verificado: navegación, editor, apertura de Profe IA, escritorio y móvil; acceso ajustado a 1366 × 768. Pruebas con servicios simulados, sin validar autenticación real ni generación IA.
+
+Conserva tu comando de despliegue de Cloudflare. Comando de compilación para incluir los archivos del proyecto y la carpeta opcional de videos:
+
+```bash
+mkdir -p dist && cp index.html app.js aula-studio.css aula-studio.js simuladores.html simuladores.js simuladores-config.js dist/ && cp -r imagenes profe-ia dist/ && if [ -d videos ]; then cp -r videos dist/; fi
+```
+
+Este cambio visual no corrige por sí mismo los errores 504 de la API de Cloudflare.
